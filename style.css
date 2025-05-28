@@ -1,179 +1,61 @@
 /*
     style.css for medicoAI
-    This file contains custom styles that complement Tailwind CSS.
-    Tailwind CSS is included via CDN in index.html.
+    This file contains custom styles that complement Tailwind CSS and inline styles in index.html.
 */
 
 /* Body Styling */
 body {
-    background-color: #f8fafc; /* Equivalent to Tailwind's bg-slate-100 */
-    font-family: 'Poppins', sans-serif; /* Ensure Poppins is linked in index.html or imported */
+    /* font-family is set by Tailwind's font-['Poppins'] on body in index.html */
+    /* background-color is set by theme logic in script.js and Tailwind on body */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* display: flex; flex-direction: column; min-height: 100vh; are good for overall layout but might conflict with splash screen fixed positioning.
-       Assuming splash screen is fixed and app is separate flow. */
 }
-
-/* Splash Screen Styling */
-#splash-screen {
-    /* Tailwind classes in index.html handle most of this:
-       fixed inset-0 bg-teal-500 flex flex-col justify-center items-center text-white z-[100] */
-    transition: opacity 0.75s ease-out; /* For fade-out effect */
-}
-
-#splash-screen.splash-fade-out {
-    opacity: 0;
-    pointer-events: none; /* Prevent interaction during/after fade-out */
-}
-
-/* Heartbeat Animation */
-@keyframes heartbeat-animation {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.25); } /* Increased scale for more pronounced beat */
-}
-
-.heartbeat-icon-animated {
-  animation: heartbeat-animation 1.5s infinite ease-in-out;
-}
-
 
 /*
     App Container Styling (#app)
-    - Fills viewport height and width.
-    - Primarily styled with Tailwind utility classes in index.html (e.g., 'h-screen', 'w-screen', 'flex', 'flex-col').
+    - Primarily styled with Tailwind utility classes in index.html.
+    - The min-height: 100vh equivalent is h-screen in Tailwind.
 */
-#app {
-    display: flex; /* This will be controlled by JS, removing 'hidden' class */
-    flex-direction: column;
-    min-height: 100vh; /* Ensure app itself can fill screen if needed */
-    /* flex-grow: 1; width: 100%; might be redundant if #app is the primary visible container after splash */
-}
+/* #app { (No specific custom styles needed here if Tailwind is used effectively in index.html) } */
 
 
-/*
-    Header Styling (header)
-    - Background color, text color, padding, shadow.
-    - Primarily styled with Tailwind utility classes in index.html
-      (e.g., 'bg-teal-600', 'text-white', 'p-4', 'shadow-md').
-*/
-
-/*
-    Chat Area Styling (#chat-area)
-    - Flexbox to grow, padding, overflow for scrolling.
-    - Primarily styled with Tailwind utility classes in index.html
-      (e.g., 'flex-grow', 'p-4', 'overflow-y-auto').
-*/
-#chat-area {
-    /* Custom scrollbar styling (optional, for consistent look) */
-    /* For Webkit browsers */
-}
-
-#chat-area::-webkit-scrollbar {
+/* Custom Scrollbar Styling for Chat Container */
+/* Updated ID from #chat-area to #chatContainer */
+#chatContainer::-webkit-scrollbar {
     width: 8px;
 }
 
-#chat-area::-webkit-scrollbar-track {
+#chatContainer::-webkit-scrollbar-track {
     background: #f1f1f1; /* Light grey track */
 }
-html.dark #chat-area::-webkit-scrollbar-track {
-    background: #2d3748; /* Darker track for dark mode (e.g., gray-700) */
+html.dark #chatContainer::-webkit-scrollbar-track {
+    background: #2d3748; /* Darker track for dark mode (e.g., gray-700 from Tailwind) */
 }
 
-#chat-area::-webkit-scrollbar-thumb {
+#chatContainer::-webkit-scrollbar-thumb {
     background: #888; /* Darker grey thumb */
     border-radius: 4px;
 }
-html.dark #chat-area::-webkit-scrollbar-thumb {
-    background: #4a5568; /* Lighter thumb for dark mode (e.g., gray-600) */
+html.dark #chatContainer::-webkit-scrollbar-thumb {
+    background: #4a5568; /* Lighter thumb for dark mode (e.g., gray-600 from Tailwind) */
 }
 
-#chat-area::-webkit-scrollbar-thumb:hover {
+#chatContainer::-webkit-scrollbar-thumb:hover {
     background: #555; /* Darker thumb on hover */
 }
-html.dark #chat-area::-webkit-scrollbar-thumb:hover {
-    background: #718096; /* Lighter thumb on hover for dark mode (e.g., gray-500) */
-}
-
-/* Message Bubble Styling */
-.message {
-    padding: 0.75rem 1rem; /* p-3 py-3 px-4 */
-    margin-bottom: 0.5rem; /* mb-2 */
-    border-radius: 0.75rem; /* rounded-xl for a bit more roundedness than lg */
-    max-width: 70%; /* Max width for messages */
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); /* Tailwind's shadow-sm or shadow */
-    word-wrap: break-word; /* Ensure long words break and don't overflow */
-}
-
-.user-message {
-    background-color: #3b82f6; /* Tailwind's bg-blue-500 */
-    color: white; /* text-white */
-    margin-left: auto; /* Align to the right */
-    /* Tailwind's dark:bg-blue-600 is good if a slightly different shade is desired in dark mode, applied in script.js or here */
-}
-/* Example for dark mode user message if needed, though usually same color is fine */
-/* html.dark .user-message { background-color: #2b6cb0; } */
-
-
-.bot-message {
-    background-color: #ffffff; /* bg-white */
-    color: #1f2937; /* text-gray-800 */
-    margin-right: auto; /* Align to the left */
-    border: 1px solid #e5e7eb; /* border border-gray-200 */
-}
-html.dark .bot-message {
-    background-color: #2d3748; /* bg-slate-700 or gray-700 */
-    color: #e2e8f0; /* text-slate-200 or gray-200 */
-    border-color: #4a5568; /* border-slate-600 or gray-600 */
-}
-
-.bot-message.typing-indicator {
-    font-style: italic;
-    background-color: #f0f4f8; /* Lighter background for typing indicator */
-    color: #4a5568; /* Muted text color */
-}
-html.dark .bot-message.typing-indicator {
-    background-color: #1a202c; /* Darker, muted background for typing indicator (e.g., gray-800) */
-    color: #a0aec0; /* Lighter, muted text color (e.g., gray-400) */
-    border-color: #2d3748;
+html.dark #chatContainer::-webkit-scrollbar-thumb:hover {
+    background: #718096; /* Lighter thumb on hover for dark mode (e.g., gray-500 from Tailwind) */
 }
 
 /*
-    Input Area Styling (footer)
-    - Background color, padding, border, flexbox alignment.
-    - Text input, image upload button, send button styling.
-    - Primarily styled with Tailwind utility classes in index.html
-      (e.g., 'bg-slate-50', 'p-4', 'border-t', 'flex', 'items-center',
-       input: 'border rounded-md p-2 flex-grow',
-       buttons: 'p-2 rounded-md hover:bg-gray-200').
+    Message Bubble, Animations, Markdown, Splash Screen, and other specific component styles
+    are now primarily handled by Tailwind utility classes applied dynamically via script.js
+    and/or inline <style> block in index.html.
+    The old .message, .user-message, .bot-message, animation keyframes, etc.,
+    have been removed from this file to avoid redundancy and conflicts.
 */
 
-/* Icon Styling */
 /*
-    Font Awesome icons are primarily styled via classes in index.html.
-    Example for an icon button (like image upload or send):
-    <button class="p-2 rounded-full hover:bg-gray-200">
-        <i class="fas fa-paperclip text-gray-600"></i>
-    </button>
-    The size and color can be controlled using Tailwind's text size and color utilities.
+    The .hidden class (display: none !important;) is provided by Tailwind.
+    If any custom .hidden class was here, it's removed to rely on Tailwind's utility.
 */
-.fa-cog { /* Example for settings icon */
-    /* color: #ffffff; */ /* If not set by Tailwind text-white in header */
-    /* font-size: 1.25rem; */ /* If specific size needed beyond Tailwind text-xl etc. */
-}
-
-/* Settings Modal Styling */
-/*
-  The settings modal (#settings-modal) is primarily styled using Tailwind CSS classes
-  in the index.html file. This includes its positioning (fixed, inset-0),
-  background overlay (bg-gray-800 bg-opacity-75), and the modal content box
-  (bg-white, p-8, rounded-lg, shadow-xl).
-  Any specific custom styles for elements *within* the modal that cannot be
-  achieved with Tailwind can be added here.
-*/
-
-/* Ensure the app container and splash screen correctly show/hide */
-.hidden {
-    display: none !important;
-}
-
-/* Removed specific styling for footer label[for="image-upload"] i as it's now handled by Tailwind classes in index.html */

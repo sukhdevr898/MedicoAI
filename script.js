@@ -1,155 +1,80 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const chatArea = document.getElementById('chat-area');
-    const userInput = document.getElementById('user-input');
-    const sendButton = document.getElementById('send-button');
-    const imageUpload = document.getElementById('image-upload');
-    const splashScreen = document.getElementById('splash-screen');
+    // --- I. Document Structure & Initial Setup ---
+    const splashScreen = document.getElementById('splash');
     const app = document.getElementById('app');
+    const chatContainer = document.getElementById('chatContainer');
+    const userInput = document.getElementById('userInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    const imagePreview = document.getElementById('imagePreview');
+    const removeImageBtn = document.getElementById('removeImage');
+    const fileNameSpan = imagePreview ? imagePreview.querySelector('.fileName') : null;
+    const settingsBtn = document.getElementById('settingsBtn');
+    const settingsModal = document.getElementById('settingsModal');
+    const closeSettingsBtn = document.getElementById('closeSettings');
+    const themeButtons = document.querySelectorAll('.theme-btn');
+    const sizeButtons = document.querySelectorAll('.size-btn');
+    const typingIndicatorToggle = document.getElementById('typingIndicator');
+    const markdownRenderingToggle = document.getElementById('markdownRendering');
+    const modelsBtn = document.getElementById('modelsBtn');
+    const modelsModal = document.getElementById('modelsModal');
+    const closeModelsBtn = document.getElementById('closeModels');
+    const selectModelBtn = document.getElementById('selectModel'); // Now used
+    const modelItems = document.querySelectorAll('.model-item'); // For model selection in the modal
 
-    // Settings Modal Elements
-    const settingsButton = document.getElementById('settings-button'); // Updated from settingsIcon
-    const settingsModal = document.getElementById('settings-modal');
-    const closeSettingsModalButton = document.getElementById('close-settings-modal');
-    const themeToggle = document.getElementById('theme-toggle');
-    const fontSmallerButton = document.getElementById('font-smaller');
-    const fontResetButton = document.getElementById('font-reset');
-    const fontLargerButton = document.getElementById('font-larger');
-    const fontSizeIndicator = document.getElementById('font-size-indicator');
+    let uploadedImageFile = null;
+    let currentAIModel = localStorage.getItem('selectedAIModel') || 'openai-large'; // Load saved model or default
+    let selectedModelIdInModal = currentAIModel; // To track selection within the modal before saving
+    let currentTypingIndicatorElement = null;
 
+    const BOT_ICON_CLASS = "fas fa-robot text-green-600"; // Using robot for bot
+    const USER_ICON_CLASS = "fas fa-user text-blue-600";
 
-    let uploadedImageFile = null; // Stores the File object for the uploaded image
-
-    // Splash screen timeout & fade-out logic
-    if (splashScreen && app) { // Ensure elements exist
+    // --- Splash Screen & App Visibility ---
+    if (splashScreen && app) {
         setTimeout(() => {
-            splashScreen.classList.add('splash-fade-out'); // Start fade-out (CSS transition)
-
+            splashScreen.classList.add('opacity-0');
             splashScreen.addEventListener('transitionend', () => {
-                splashScreen.classList.add('hidden'); // Actually hide after transition
+                splashScreen.classList.add('hidden');
                 app.classList.remove('hidden');
-                app.classList.add('flex'); // Ensure app is displayed as a flex container
-            }, { once: true }); // Ensure event listener is removed after firing once
-
-        }, 2500); // Adjusted delay to 2.5 seconds
+                app.classList.add('flex');
+            }, { once: true });
+        }, 2000);
     } else {
-        // Fallback if splash screen or app element is not found (should not happen in normal flow)
         if (app) app.classList.remove('hidden');
     }
 
-    // Settings Modal Visibility Logic
-    if (settingsButton) {
-        settingsButton.addEventListener('click', () => {
-            if (settingsModal) {
-                settingsModal.classList.remove('hidden');
-                settingsModal.classList.add('flex'); // Use flex to show as per HTML structure
-            }
+    // --- Core Chat Logic ---
+    if (userInput) {
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
         });
     }
-    if (closeSettingsModalButton) {
-        closeSettingsModalButton.addEventListener('click', () => {
-            if (settingsModal) {
-                settingsModal.classList.add('hidden');
-                settingsModal.classList.remove('flex');
-            }
-        });
+
+    if (uploadBtn) {
+        uploadBtn.addEventListener('click', () => fileInput.click());
     }
-    if (settingsModal) {
-        // Close modal if clicked outside of the modal content (on the backdrop)
-        settingsModal.addEventListener('click', (event) => {
-            if (event.target === settingsModal) {
-                settingsModal.classList.add('hidden');
-                settingsModal.classList.remove('flex');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadedImageFile = e.target.files[0];
+                if (fileNameSpan) fileNameSpan.textContent = uploadedImageFile.name;
+                if (imagePreview) imagePreview.classList.remove('hidden');
             }
         });
     }
 
-    // Theme Switching Logic
-    const applyTheme = (theme) => {
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-            if (themeToggle) themeToggle.checked = true;
-        } else {
-            document.documentElement.classList.remove('dark');
-            if (themeToggle) themeToggle.checked = false;
-        }
-    };
-
-    if (themeToggle) {
-        themeToggle.addEventListener('change', (e) => {
-            const newTheme = e.target.checked ? 'dark' : 'light';
-            localStorage.setItem('theme', newTheme);
-            applyTheme(newTheme);
+    if (removeImageBtn) {
+        removeImageBtn.addEventListener('click', () => {
+            if (fileInput) fileInput.value = '';
+            uploadedImageFile = null;
+            if (imagePreview) imagePreview.classList.add('hidden');
         });
     }
-
-    // Load Saved Theme on Startup
-    const savedTheme = localStorage.getItem('theme');
-    applyTheme(savedTheme || 'light'); // Default to light if no theme saved
-
-
-    // Font Size Adjustment Logic
-    const fontSizes = [
-        { name: 'Smallest', value: '0.8rem', scale: 0.8 }, // Example: smaller
-        { name: 'Small', value: '0.9rem', scale: 0.9 },
-        { name: 'Normal', value: '1rem', scale: 1.0 },    // Base size
-        { name: 'Large', value: '1.1rem', scale: 1.1 },
-        { name: 'Largest', value: '1.2rem', scale: 1.2 } // Example: larger
-    ];
-    let currentFontSizeIndex = fontSizes.findIndex(fs => fs.name === 'Normal'); // Default to normal
-
-    const updateFontSizeIndicator = () => {
-        if (fontSizeIndicator) {
-            fontSizeIndicator.textContent = `Current: ${fontSizes[currentFontSizeIndex].name}`;
-        }
-    };
     
-    const applyFontSize = (index) => {
-        if (index >= 0 && index < fontSizes.length) {
-            currentFontSizeIndex = index;
-            document.body.style.fontSize = fontSizes[currentFontSizeIndex].value;
-            localStorage.setItem('fontSize', fontSizes[currentFontSizeIndex].name);
-            updateFontSizeIndicator();
-        }
-    };
-
-    if (fontSmallerButton) {
-        fontSmallerButton.addEventListener('click', () => {
-            if (currentFontSizeIndex > 0) {
-                applyFontSize(currentFontSizeIndex - 1);
-            }
-        });
-    }
-
-    if (fontLargerButton) {
-        fontLargerButton.addEventListener('click', () => {
-            if (currentFontSizeIndex < fontSizes.length - 1) {
-                applyFontSize(currentFontSizeIndex + 1);
-            }
-        });
-    }
-
-    if (fontResetButton) {
-        fontResetButton.addEventListener('click', () => {
-            const defaultIndex = fontSizes.findIndex(fs => fs.name === 'Normal');
-            applyFontSize(defaultIndex);
-        });
-    }
-
-    // Load Saved Font Size on Startup
-    const savedFontSizeName = localStorage.getItem('fontSize');
-    const initialFontSizeIndex = fontSizes.findIndex(fs => fs.name === savedFontSizeName);
-    if (initialFontSizeIndex !== -1) {
-        applyFontSize(initialFontSizeIndex);
-    } else {
-        applyFontSize(fontSizes.findIndex(fs => fs.name === 'Normal')); // Default to normal
-    }
-
-
-    /**
-     * Converts a File object to a base64 data URL string.
-     * @param {File} file - The file to convert.
-     * @returns {Promise<string>} A promise that resolves with the data URL.
-     */
     function fileToBase64(file) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
@@ -159,241 +84,356 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    /**
-     * Displays a message in the chat area.
-     * @param {string | HTMLElement} content - The message content (text or HTML element).
-     * @param {string} sender - 'user' or 'bot'.
-     */
-    function displayMessage(content, sender) {
-        if (!chatArea) return;
+    function displayMessage(content, sender, userImageSrc = null) {
+        if (!chatContainer) return;
 
-        const messageWrapper = document.createElement('div');
-        messageWrapper.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
-        // Tailwind typography classes for dark mode are applied in style.css or directly on elements
-        // e.g., messageWrapper.classList.add('dark:text-gray-200'); 
+        const messageOuterDiv = document.createElement('div');
+        // Alignment based on new HTML structure from ui.html
+        messageOuterDiv.className = `max-w-3xl mx-auto fade-in ${sender === 'user' ? 'pl-10' : 'pr-10'}`;
 
-        if (typeof content === 'string') {
-            messageWrapper.innerHTML = content;
-        } else if (content instanceof HTMLElement) {
-            messageWrapper.appendChild(content);
+        let imageHTML = '';
+        if (userImageSrc && sender === 'user') {
+            imageHTML = `
+                <div class="mb-2 rounded-lg overflow-hidden max-w-xs ${sender === 'user' ? 'ml-auto' : ''}">
+                    <img src="${userImageSrc}" alt="User uploaded image" class="max-w-full h-auto">
+                </div>`;
+        }
+        
+        // Sanitize content before inserting with innerHTML if it's from user/API
+        // For now, simple text replacement for newlines. For full Markdown, a library is needed.
+        const sanitizedContent = content.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, '<br>');
+
+
+        if (sender === 'user') {
+            messageOuterDiv.innerHTML = `
+                <div class="flex justify-end mb-2">
+                    <div class="flex flex-col items-end">
+                        ${imageHTML}
+                        <div class="bg-blue-600 text-white rounded-xl rounded-tr-none px-4 py-3 shadow-sm">
+                            <p>${sanitizedContent}</p>
+                        </div>
+                    </div>
+                    <div class="ml-2 flex-shrink-0">
+                        <div class="bg-blue-100 h-10 w-10 rounded-full flex items-center justify-center">
+                            <i class="${USER_ICON_CLASS}"></i>
+                        </div>
+                    </div>
+                </div>
+            `;
+        } else { // Bot message
+            const contentDivId = `bot-content-${Date.now()}`;
+            let botContentHTML = sanitizedContent;
+            // If markdown is enabled and we had a library:
+            // if (markdownRenderingToggle && markdownRenderingToggle.checked) {
+            // botContentHTML = marked.parse(content); // Example with 'marked' library
+            // }
+
+            const currentTheme = localStorage.getItem('theme') || 'light';
+            let bubbleClasses = "bg-white border border-gray-200"; // Light theme default
+            let titleColor = "text-green-700";
+            let copyBtnClasses = "text-gray-400 hover:text-blue-600";
+            let botIconBg = "bg-green-100";
+            let botIconText = BOT_ICON_CLASS; // Default green defined earlier
+
+            if (currentTheme === 'dark') {
+                bubbleClasses = "bg-gray-700 border border-gray-600 text-gray-100"; // Dark theme
+                titleColor = "text-green-400";
+                copyBtnClasses = "text-gray-400 hover:text-blue-400";
+                botIconBg = "bg-gray-600"; // Darker green background for bot icon
+                // botIconText = "fas fa-robot text-green-400"; // Lighter green icon for dark theme
+            } else if (currentTheme === 'blue') {
+                bubbleClasses = "bg-blue-100 border border-blue-200 text-blue-900"; // Blue theme
+                titleColor = "text-blue-700";
+                copyBtnClasses = "text-blue-500 hover:text-blue-700";
+                botIconBg = "bg-blue-200";
+                // botIconText = "fas fa-robot text-blue-700";
+            }
+            // Note: Markdown content styles in index.html might need .dark .markdown-content ... or .blue-theme .markdown-content overrides
+            
+            messageOuterDiv.innerHTML = `
+                <div class="flex mb-2">
+                    <div class="mr-2 flex-shrink-0">
+                        <div class="${botIconBg} h-10 w-10 rounded-full flex items-center justify-center">
+                            <i class="${botIconText}"></i>
+                        </div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="${bubbleClasses} rounded-xl rounded-tl-none px-4 py-3 shadow-sm">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-semibold ${titleColor}">medicoAI</span>
+                                <button class="copy-btn ${copyBtnClasses}" aria-label="Copy message content">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            <div id="${contentDivId}" class="${markdownRenderingToggle && markdownRenderingToggle.checked ? 'markdown-content' : ''}">
+                                ${botContentHTML}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const copyButton = messageOuterDiv.querySelector('.copy-btn');
+            if (copyButton) {
+                copyButton.addEventListener('click', () => {
+                    // Use original non-sanitized content for copying if possible, or re-parse for text
+                    const textToCopy = content; // Use original content for copy
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        const icon = copyButton.querySelector('i');
+                        icon.className = 'fas fa-check text-green-500';
+                        copyButton.setAttribute('aria-label', 'Content copied to clipboard');
+                        setTimeout(() => {
+                            icon.className = 'fas fa-copy';
+                            copyButton.setAttribute('aria-label', 'Copy message content');
+                        }, 2000);
+                    }).catch(err => console.error('Failed to copy text: ', err));
+                });
+            }
         }
 
-        if (sender === 'bot') {
-            const copyButton = document.createElement('button');
-            copyButton.classList.add('copy-btn', 'ml-2', 'p-1', 'text-xs', 'bg-gray-200', 'hover:bg-gray-300', 'rounded', 'align-top', 'dark:bg-gray-600', 'dark:hover:bg-gray-500', 'dark:text-gray-200');
-            copyButton.innerHTML = '<i class="fas fa-copy mr-1"></i>Copy'; // Added mr-1 for spacing
-            copyButton.setAttribute('aria-label', 'Copy message content');
-            messageWrapper.appendChild(copyButton);
+        chatContainer.appendChild(messageOuterDiv);
+        messageOuterDiv.scrollIntoView({ behavior: 'smooth' });
+    }
+    
+    function showTypingIndicatorUI() {
+        if (!chatContainer || (typingIndicatorToggle && !typingIndicatorToggle.checked)) return;
+        if (currentTypingIndicatorElement) currentTypingIndicatorElement.remove(); 
+
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        let bubbleClasses = "bg-white border border-gray-200"; // Light theme default
+        let botIconBg = "bg-green-100";
+        let botIconText = BOT_ICON_CLASS;
+
+        if (currentTheme === 'dark') {
+            bubbleClasses = "bg-gray-700 border border-gray-600";
+            botIconBg = "bg-gray-600";
+        } else if (currentTheme === 'blue') {
+            bubbleClasses = "bg-blue-100 border border-blue-200";
+            botIconBg = "bg-blue-200";
         }
 
-        // Optional: Add user/bot icons to messages
-        // This is a stylistic choice and can be expanded.
-        // const iconElement = document.createElement('i');
-        // if (sender === 'user') {
-        //     iconElement.classList.add('fas', 'fa-user', 'mr-2', 'text-sm', 'align-middle');
-        // } else {
-        //     iconElement.classList.add('fas', 'fa-robot', 'mr-2', 'text-sm', 'align-middle');
-        // }
-        // messageWrapper.insertBefore(iconElement, messageWrapper.firstChild);
-
-
-        chatArea.appendChild(messageWrapper);
-        chatArea.scrollTop = chatArea.scrollHeight;
+        currentTypingIndicatorElement = document.createElement('div');
+        currentTypingIndicatorElement.className = 'max-w-3xl mx-auto fade-in pr-10';
+        currentTypingIndicatorElement.innerHTML = `
+            <div class="flex mb-2">
+                <div class="mr-2 flex-shrink-0">
+                    <div class="${botIconBg} h-10 w-10 rounded-full flex items-center justify-center">
+                        <i class="${botIconText}"></i>
+                    </div>
+                </div>
+                <div class="flex-1">
+                    <div class="${bubbleClasses} rounded-xl rounded-tl-none px-4 py-3 shadow-sm">
+                        <div class="flex">
+                            <div class="typing"></div> <div class="typing"></div> <div class="typing"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(currentTypingIndicatorElement);
+        currentTypingIndicatorElement.scrollIntoView({ behavior: 'smooth' });
     }
 
-    let typingIndicatorElement;
-    /**
-     * Shows a typing indicator for the bot.
-     */
-    function showTypingIndicator() {
-        if (!chatArea) return;
-        if (typingIndicatorElement) return;
-
-        typingIndicatorElement = document.createElement('div');
-        typingIndicatorElement.classList.add('message', 'bot-message', 'typing-indicator', 'dark:text-gray-300'); // Dark mode for typing indicator
-        typingIndicatorElement.textContent = "MedicoAI is typing...";
-        chatArea.appendChild(typingIndicatorElement);
-        chatArea.scrollTop = chatArea.scrollHeight;
-    }
-
-    /**
-     * Hides the typing indicator for the bot.
-     */
-    function hideTypingIndicator() {
-        if (typingIndicatorElement) {
-            typingIndicatorElement.remove();
-            typingIndicatorElement = null;
+    function hideTypingIndicatorUI() {
+        if (currentTypingIndicatorElement) {
+            currentTypingIndicatorElement.remove();
+            currentTypingIndicatorElement = null;
         }
     }
 
-    /**
-     * Fetches a response from the Pollination AI API.
-     * @param {string} userText - The text input from the user.
-     * @param {string | null} imageDataUrl - Base64 data URL of the image, or null.
-     */
-    async function getPollinationAIResponse(userText, imageDataUrl) {
-        showTypingIndicator();
+    async function getPollinationAIResponse(userText, base64ImageDataUrl) {
+        showTypingIndicatorUI();
         const apiUrl = 'https://text.pollinations.ai/openai';
-        const modelName = "openai-large";
+        // Use the currentAIModel variable, which is loaded from localStorage or defaults
+        const modelName = currentAIModel;
 
         const messages = [
-            { "role": "system", "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine." }
+            { "role": "system", "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine. Format responses using Markdown where appropriate for tables, lists, code blocks, bolding, italics etc." }
         ];
 
-        if (imageDataUrl) {
+        if (base64ImageDataUrl) {
             messages.push({
-                "role": "user",
-                "content": [
-                    { "type": "text", "text": userText },
-                    { "type": "image_url", "image_url": { "url": imageDataUrl } }
-                ]
+                "role": "user", "content": [{ "type": "text", "text": userText }, { "type": "image_url", "image_url": { "url": base64ImageDataUrl } }]
             });
         } else {
             messages.push({ "role": "user", "content": userText });
         }
 
-        const payload = {
-            "model": modelName,
-            "messages": messages,
-            "max_tokens": 1000,
-            "referrer": "medicoAI"
-        };
+        const payload = { "model": modelName, "messages": messages, "max_tokens": 2000, "referrer": "medicoAI_ExternalJS_v2" };
 
         try {
             const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload)
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
             });
-
-            hideTypingIndicator();
-
+            hideTypingIndicatorUI();
             if (response.ok) {
                 const data = await response.json();
                 if (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) {
-                    const botMessage = data.choices[0].message.content;
-                    displayMessage(botMessage, 'bot');
+                    displayMessage(data.choices[0].message.content, 'bot');
                 } else {
-                    console.error('API response format error:', data);
-                    displayMessage("Sorry, the AI response was not in the expected format. Please try again.", 'bot');
+                    displayMessage("Sorry, the AI response was not in the expected format.", 'bot');
                 }
             } else {
-                const errorData = await response.text();
-                console.error('API error:', response.status, errorData);
                 displayMessage(`Sorry, I encountered an error (Status: ${response.status}). Please try again.`, 'bot');
             }
         } catch (error) {
-            hideTypingIndicator();
-            console.error('Fetch API call failed:', error);
-            displayMessage("Sorry, I couldn't connect to the AI. Please check your internet connection and try again.", 'bot');
+            hideTypingIndicatorUI();
+            displayMessage("Sorry, I couldn't connect to the AI. Please check your internet connection.", 'bot');
         }
     }
-
-    /**
-     * Handles sending a message (text and/or image).
-     */
-    async function sendMessage() {
+    
+    async function handleSendMessage() {
         const text = userInput.value.trim();
         const currentImageFile = uploadedImageFile;
+        if (text === '' && !currentImageFile) return;
 
-        if (text === '' && !currentImageFile) {
-            return;
-        }
-
+        let base64ImageDataUrl = null;
         if (currentImageFile) {
             try {
-                const dataUrl = await fileToBase64(currentImageFile);
-                const img = document.createElement('img');
-                img.src = dataUrl;
-                img.style.maxWidth = '200px';
-                img.style.maxHeight = '200px';
-                img.style.borderRadius = '0.5rem';
-                img.classList.add('mt-2');
-
-                if (text) {
-                    const contentDiv = document.createElement('div');
-                    const textDiv = document.createElement('div');
-                    textDiv.textContent = text;
-                    contentDiv.appendChild(textDiv);
-                    contentDiv.appendChild(img);
-                    displayMessage(contentDiv, 'user');
-                } else {
-                    displayMessage(img, 'user');
-                }
-                getPollinationAIResponse(text, dataUrl);
-
+                base64ImageDataUrl = await fileToBase64(currentImageFile);
             } catch (error) {
-                console.error("Error converting file to Base64 for display:", error);
-                displayMessage("Error preparing image for display.", 'user');
-                if (text) getPollinationAIResponse(text, null);
+                displayMessage("Error preparing image. Please try again.", 'user'); return;
             }
-        } else if (text) {
-            displayMessage(text, 'user');
-            getPollinationAIResponse(text, null);
         }
+        
+        displayMessage(text || (currentImageFile ? currentImageFile.name : "Image uploaded"), 'user', base64ImageDataUrl);
+        getPollinationAIResponse(text, base64ImageDataUrl);
 
         userInput.value = '';
-        imageUpload.value = '';
+        userInput.style.height = 'auto';
+        if (fileInput) fileInput.value = '';
         uploadedImageFile = null;
-        userInput.placeholder = "Type your message...";
+        if (imagePreview) imagePreview.classList.add('hidden');
     }
 
-    // Event Listeners for Sending Message
-    if (sendButton) sendButton.addEventListener('click', sendMessage);
+    if (sendBtn) sendBtn.addEventListener('click', handleSendMessage);
     if (userInput) {
-        userInput.addEventListener('keypress', (event) => {
-            if (event.key === 'Enter') {
-                sendMessage();
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(); }
+        });
+    }
+
+    // --- Settings & Models Modals ---
+    if (settingsBtn) {
+        settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    }
+    if (closeSettingsBtn) {
+        closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    }
+    // Close modal if clicked outside of the modal content (on the backdrop)
+    if (settingsModal) {
+        settingsModal.addEventListener('click', (event) => {
+            if (event.target === settingsModal) { // Check if the click is on the backdrop itself
+                settingsModal.classList.add('hidden');
             }
         });
     }
 
-    // Event Listener for Copy Button (using event delegation)
-    if (chatArea) {
-        chatArea.addEventListener('click', (event) => {
-            const target = event.target.closest('.copy-btn');
-            if (target) {
-                const messageBubble = target.closest('.bot-message');
-                if (messageBubble) {
-                    const messageClone = messageBubble.cloneNode(true);
-                    const buttonInClone = messageClone.querySelector('.copy-btn');
-                    if (buttonInClone) buttonInClone.remove();
-                    
-                    const textToCopy = messageClone.textContent || messageClone.innerText;
-                    navigator.clipboard.writeText(textToCopy.trim())
-                        .then(() => {
-                            const originalButtonHTML = target.innerHTML; // Store original HTML
-                            const originalAriaLabel = target.getAttribute('aria-label');
-                            target.innerHTML = '<i class="fas fa-check mr-1"></i>Copied!';
-                            target.setAttribute('aria-label', 'Content copied to clipboard');
-                            target.disabled = true;
-                            setTimeout(() => {
-                                target.innerHTML = originalButtonHTML; // Restore original HTML
-                                target.setAttribute('aria-label', originalAriaLabel || 'Copy message content');
-                                target.disabled = false;
-                            }, 2000);
-                        })
-                        .catch(err => {
-                            console.error('Failed to copy text: ', err);
-                            alert('Failed to copy. Please try manually.');
-                        });
-                }
+    if (modelsBtn) {
+        modelsBtn.addEventListener('click', () => {
+            modelsModal.classList.remove('hidden');
+            selectedModelIdInModal = currentAIModel; // Reset modal selection to current actual model
+            updateModelSelectionVisual(); // Update visual based on current actual model
+        });
+    }
+    if (closeModelsBtn) {
+        closeModelsBtn.addEventListener('click', () => modelsModal.classList.add('hidden'));
+    }
+    if (modelsModal) { // Also close on backdrop click
+        modelsModal.addEventListener('click', (event) => {
+            if (event.target === modelsModal) {
+                modelsModal.classList.add('hidden');
             }
         });
     }
 
-    // Event Listener for Image Upload
-    if (imageUpload) {
-        imageUpload.addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                uploadedImageFile = file;
-                if (userInput) {
-                    userInput.placeholder = `Image "${file.name}" selected. Add a message?`;
-                }
+    // Model Selection Logic
+    function updateModelSelectionVisual() {
+        modelItems.forEach(item => {
+            if (item.dataset.model === selectedModelIdInModal) {
+                // Highlight selected: e.g., border and shadow
+                item.classList.add('ring-2', 'ring-blue-500', 'border-transparent', 'shadow-lg');
+                item.classList.remove('border-gray-200');
+            } else {
+                // Default state for non-selected
+                item.classList.remove('ring-2', 'ring-blue-500', 'border-transparent', 'shadow-lg');
+                item.classList.add('border-gray-200');
             }
         });
     }
+
+    modelItems.forEach(item => {
+        item.addEventListener('click', function() {
+            selectedModelIdInModal = this.dataset.model; // Temporarily store selection
+            updateModelSelectionVisual();
+        });
+    });
+
+    if (selectModelBtn) {
+        selectModelBtn.addEventListener('click', () => {
+            if (selectedModelIdInModal) {
+                currentAIModel = selectedModelIdInModal; // Commit selection
+                localStorage.setItem('selectedAIModel', currentAIModel);
+                console.log(`AI Model selected and saved: ${currentAIModel}`);
+            }
+            modelsModal.classList.add('hidden');
+        });
+    }
+    
+    // Initial visual update for model items when the script loads or modal is opened
+    // This ensures the currently active model (from localStorage or default) is highlighted.
+    // Call it once at load time to set the initial state of selectedModelIdInModal for the first modal open.
+    selectedModelIdInModal = currentAIModel; 
+    // updateModelSelectionVisual(); // No need to call here, called when modal opens
+
+
+    // Theme Switching
+    function applyTheme(theme) {
+        document.documentElement.classList.remove('dark', 'blue-theme'); // Remove potential existing theme classes from html
+        document.body.className = "font-['Poppins'] h-screen flex flex-col"; // Reset body classes
+
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            document.body.classList.add('bg-gray-900', 'text-gray-100');
+        } else if (theme === 'blue') {
+            document.documentElement.classList.add('blue-theme'); // Custom class for more specific blue theme styles if needed
+            document.body.classList.add('bg-blue-50', 'text-blue-900'); // Example blue theme
+        } else { // Light theme
+            document.body.classList.add('bg-gray-50', 'text-gray-800');
+        }
+        localStorage.setItem('theme', theme);
+        themeButtons.forEach(b => {
+            b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500');
+            if (b.dataset.theme === theme) {
+                b.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500');
+            }
+        });
+    }
+    themeButtons.forEach(btn => btn.addEventListener('click', function() { applyTheme(this.dataset.theme); }));
+    applyTheme(localStorage.getItem('theme') || 'light');
+
+
+    // Font Size Switching
+    function applyFontSize(size) {
+        const sizes = { sm: '14px', md: '16px', lg: '18px' };
+        document.body.style.fontSize = sizes[size] || sizes['md'];
+        localStorage.setItem('fontSize', size);
+        sizeButtons.forEach(b => {
+            b.classList.remove('ring-2', 'ring-offset-2', 'ring-blue-500');
+            if (b.dataset.size === size) {
+                b.classList.add('ring-2', 'ring-offset-2', 'ring-blue-500');
+            }
+        });
+    }
+    sizeButtons.forEach(btn => btn.addEventListener('click', function() { applyFontSize(this.dataset.size); }));
+    applyFontSize(localStorage.getItem('fontSize') || 'md');
+
+    // Chat Options Toggles
+    [typingIndicatorToggle, markdownRenderingToggle].forEach(toggle => {
+        if (toggle) {
+            const storageKey = toggle.id === 'typingIndicator' ? 'typingIndicatorEnabled' : 'markdownEnabled';
+            toggle.checked = JSON.parse(localStorage.getItem(storageKey) ?? 'true');
+            toggle.addEventListener('change', () => localStorage.setItem(storageKey, toggle.checked));
+        }
+    });
 });

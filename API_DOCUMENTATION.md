@@ -4,17 +4,31 @@
 
 medicoAI utilizes the Pollination AI service as its backend for generating responses to user queries. Communication with the Pollination AI service is primarily handled via their OpenAI-compatible POST endpoint, allowing for text and image-based interactions.
 
+The application now includes a "Models Modal" in the UI, allowing users to switch between different supported AI models for their queries. The selected model preference is stored locally and used for subsequent API requests.
+
 ## 2. Authentication
 
 The application uses referrer-based authentication. For frontend web applications like medicoAI, the browser automatically sends the `Referer` header with each request, which Pollination AI uses to identify the source of the request.
 
-Additionally, medicoAI includes an optional `referrer: "medicoAI"` field in the JSON payload sent to the API. This serves as an explicit identifier for the application.
+Additionally, medicoAI includes an optional `referrer: "medicoAI_ExternalJS_v2"` field in the JSON payload sent to the API. This serves as an explicit identifier for the application.
 
-## 3. Primary AI Model Used
+## 3. Supported AI Models and Selection
 
--   **Name:** OpenAI GPT-4.1 (Vision capable)
--   **Identifier used in API calls:** `openai-large`
--   **Key Capabilities:** This model excels in text understanding, complex text generation, and vision (image analysis). It is well-suited for medicoAI's purpose of providing detailed answers and explanations for medical students, including interpreting medical images.
+medicoAI allows users to select from a list of supported AI models via the "Models Modal" in the user interface. The selected model's identifier is stored in `localStorage` and is used in the `model` field of the API request payload.
+
+The following models are available:
+
+-   **OpenAI GPT-4.1 (Default)**
+    -   **Identifier used in API calls:** `openai-large`
+    -   **Key Capabilities:** Advanced medical knowledge with image analysis capabilities. Well-suited for detailed medical explanations and interpreting medical images.
+-   **Mistral Small 3.1**
+    -   **Identifier used in API calls:** `mistral`
+    -   **Key Capabilities:** Fast and efficient model, suitable for general medical queries. Supports image analysis.
+-   **Llama 3.3 70B**
+    -   **Identifier used in API calls:** `llama`
+    *   **Key Capabilities:** Comprehensive medical knowledge base, text-only (does not support image analysis).
+
+If no model is explicitly selected by the user, `openai-large` is used as the default.
 
 ## 4. API Endpoint
 
@@ -33,7 +47,7 @@ The body of the POST request is a JSON object containing details about the model
 
 **Key Fields Explained:**
 
--   `model`: (string) The identifier for the AI model to be used (e.g., `"openai-large"`).
+-   `model`: (string) The identifier for the AI model to be used. This value is dynamic based on user selection via the Models Modal (e.g., `"openai-large"`, `"mistral"`, `"llama"`). Defaults to `"openai-large"`.
 -   `messages`: (array) An array of message objects that form the conversation history.
     -   `role`: (string) The role of the message sender, either `"system"`, `"user"`, or `"assistant"`.
         -   `system`: Provides initial instructions or context to the AI.
@@ -41,42 +55,43 @@ The body of the POST request is a JSON object containing details about the model
         -   `assistant`: Represents previous responses from the AI (not typically sent by the client for a new query, but part of the conversation context if maintained).
     -   `content`: (string or array) The content of the message.
         -   For text-only messages, this is a string.
-        -   For messages including images (vision), this is an array containing a text part and an image URL part.
+        -   For messages including images (vision), this is an array containing a text part and an image URL part. (Note: Not all models support image input, e.g., `llama`).
             -   `{ "type": "text", "text": "User's text query" }`
             -   `{ "type": "image_url", "image_url": { "url": "data:image/jpeg;base64,BASE64_ENCODED_IMAGE_STRING" } }`
                 -   The `url` for the image must be a base64 encoded data URI.
--   `max_tokens`: (integer) The maximum number of tokens (roughly, words or pieces of words) the AI should generate in its response. For medicoAI, this is typically set to `1000`.
--   `referrer`: (string, optional) An explicit identifier for the application (e.g., `"medicoAI"`).
+-   `max_tokens`: (integer) The maximum number of tokens the AI should generate. For medicoAI, this is typically set to `2000`.
+-   `referrer`: (string, optional) An explicit identifier for the application (e.g., `"medicoAI_ExternalJS_v2"`).
 
 **Example: Text-Only Query**
 
 ```json
 {
-  "model": "openai-large",
+  "model": "SELECTED_MODEL_IDENTIFIER", // e.g., "openai-large", "mistral", "llama"
   "messages": [
     {
       "role": "system",
-      "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine."
+      "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine. Format responses using Markdown where appropriate for tables, lists, code blocks, bolding, italics etc."
     },
     {
       "role": "user",
       "content": "Explain the Krebs cycle."
     }
   ],
-  "max_tokens": 1000,
-  "referrer": "medicoAI"
+  "max_tokens": 2000,
+  "referrer": "medicoAI_ExternalJS_v2"
 }
 ```
+*Note: `SELECTED_MODEL_IDENTIFIER` is replaced by the identifier of the model chosen by the user (e.g., "openai-large", "mistral", "llama").*
 
 **Example: Image + Text Query (Vision)**
-
+*(Ensure the selected model supports image input, e.g., `openai-large` or `mistral`)*
 ```json
 {
-  "model": "openai-large",
+  "model": "SELECTED_MODEL_IDENTIFIER", // e.g., "openai-large", "mistral"
   "messages": [
     {
       "role": "system",
-      "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine."
+      "content": "You are medicoAI, a helpful assistant for medical students preparing for exams. Provide accurate answers and explanations in medicine. Format responses using Markdown where appropriate for tables, lists, code blocks, bolding, italics etc."
     },
     {
       "role": "user",
@@ -89,10 +104,11 @@ The body of the POST request is a JSON object containing details about the model
       ]
     }
   ],
-  "max_tokens": 1000,
-  "referrer": "medicoAI"
+  "max_tokens": 2000,
+  "referrer": "medicoAI_ExternalJS_v2"
 }
 ```
+*Note: `SELECTED_MODEL_IDENTIFIER` is replaced by the identifier of the model chosen by the user. Ensure the selected model supports image input.*
 
 ## 6. Response Format (Success)
 
