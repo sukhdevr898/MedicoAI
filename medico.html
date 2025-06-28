@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700&family=Noto+Sans:wght@400;700&display=swap">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+  <title>Medico AI</title>
+  <link rel="icon" href="data:image/x-icon;base64," type="image/x-icon"/>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <!-- MathJax for LaTeX rendering -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true,
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+  <style type="text/tailwindcss">
+    :root {
+      --primary-color: #0c7ff2;
+      --chat-bg-user: #0c7ff2;
+      --chat-bg-bot: #f2f5fa;
+      --text-primary: #111827;
+      --text-secondary: #49739c;
+      --bg-main: #f8fafc;
+      --bg-input: #e7edf4;
+      --accent-color: #e0f2fe;
+    }
+    .chat-bubble-bot {
+      @apply bg-[var(--chat-bg-bot)] text-[var(--text-primary)] rounded-2xl rounded-br-lg;
+      transition: background 0.2s;
+    }
+    .chat-bubble-user {
+      @apply bg-[var(--chat-bg-user)] text-white rounded-2xl rounded-bl-lg;
+      transition: background 0.2s;
+    }
+    .image-thumb {
+      @apply w-14 h-14 rounded-md object-cover cursor-pointer border border-slate-200 hover:ring-2 hover:ring-[var(--primary-color)];
+      transition: box-shadow 0.2s;
+    }
+    .image-preview-modal {
+      @apply fixed inset-0 z-50 bg-black/70 flex items-center justify-center;
+      animation: fadeIn 0.2s;
+    }
+    .image-preview-img {
+      @apply max-h-[80vh] max-w-[96vw] rounded-lg shadow-2xl;
+      animation: fadeInUp 0.25s;
+    }
+    .typing-dot {
+      width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: #b0b8c5; display: inline-block; animation: typingBlink 1s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: .2s; }
+    .typing-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes typingBlink {
+      0%, 80%, 100% { opacity: .3; }
+      40% { opacity: 1; }
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px);} to { opacity: 1; transform: translateY(0);} }
+    .markdown-body {
+      font-size: 1rem;
+      line-height: 1.7;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+    .markdown-body pre, .markdown-body code {
+      background: #f3f6fa;
+      font-family: 'Fira Mono', 'Consolas', monospace;
+      font-size: 0.98em;
+      border-radius: 4px;
+      padding: 2px 4px;
+    }
+    .markdown-body pre { padding: 12px; }
+    .markdown-body blockquote {
+      border-left: 4px solid #0c7ff2;
+      background: #e7edf4;
+      padding: 4px 12px;
+      margin: 8px 0;
+      border-radius: 0 6px 6px 0;
+      color: #49739c;
+    }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+      font-weight: 700;
+      color: var(--primary-color);
+      margin-top: 1em;
+      margin-bottom: 0.5em;
+    }
+    .markdown-body ul, .markdown-body ol {
+      padding-left: 1.5em;
+    }
+    .copy-btn {
+      @apply absolute top-1 right-1 bg-[var(--primary-color)] text-white rounded-full p-1 shadow hover:bg-opacity-90 transition-all duration-150 flex items-center justify-center;
+      font-size: 0.92em;
+      z-index: 2;
+      opacity: 0.82;
+      width: 28px;
+      height: 28px;
+      min-width: 28px;
+      min-height: 28px;
+      max-width: 28px;
+      max-height: 28px;
+    }
+    .copy-btn.copied {
+      @apply bg-green-500;
+      opacity: 1;
+    }
+    @media (max-width: 640px) {
+      html, body { font-size: 16px !important; }
+      .copy-btn { width: 24px; height: 24px; font-size: 0.85em; }
+    }
+    body { min-height: 100dvh; font-family: Manrope, "Noto Sans", sans-serif; }
+  </style>
+</head>
+<body class="bg-[var(--bg-main)] min-h-screen flex flex-col">
+<div class="flex flex-col min-h-screen max-w-full mx-auto w-full">
+  <header class="sticky top-0 z-20 bg-[var(--bg-main)]/90 shadow-sm flex-shrink-0 w-full" style="backdrop-filter: blur(6px);-webkit-backdrop-filter: blur(6px);">
+    <div class="flex items-center p-3 sm:p-4">
+      <button class="text-[var(--text-primary)] hover:bg-slate-100 p-2 rounded-xl transition-colors duration-150" id="back-btn" title="Back">
+        <span class="material-symbols-outlined">arrow_back_ios_new</span>
+      </button>
+      <h1 class="text-[var(--text-primary)] text-lg sm:text-xl font-bold leading-tight tracking-tight flex-1 text-center">Medico AI</h1>
+      <div class="flex items-center space-x-1">
+        <button class="text-[var(--text-primary)] hover:bg-slate-100 p-2 rounded-xl transition-colors duration-150" title="Clear Chat" id="clear-chat-btn">
+          <span class="material-symbols-outlined">delete_sweep</span>
+        </button>
+        <button class="text-[var(--text-primary)] hover:bg-slate-100 p-2 rounded-xl transition-colors duration-150" title="Export Chat as PDF" id="export-pdf-btn">
+          <span class="material-symbols-outlined">picture_as_pdf</span>
+        </button>
+        <button class="text-[var(--text-primary)] hover:bg-slate-100 p-2 rounded-xl transition-colors duration-150" id="settings-button">
+          <span class="material-symbols-outlined">settings</span>
+        </button>
+      </div>
+    </div>
+  </header>
+  <main class="flex-1 overflow-y-auto p-2 sm:p-4 space-y-4 sm:space-y-6 max-w-full transition-all duration-200" id="chat-main">
+    <div id="chat-list" class="space-y-4 sm:space-y-6"></div>
+  </main>
+  <footer class="sticky bottom-0 z-30 bg-[var(--bg-main)]/90 p-2 sm:p-3 border-t border-slate-200 rounded-t-xl flex-shrink-0 w-full">
+    <form id="chat-form" class="flex items-end gap-2 max-w-full">
+      <div class="flex items-end flex-1 bg-[var(--bg-input)] rounded-xl px-2 sm:px-3 py-1 shadow-sm gap-1">
+        <input
+          class="form-input flex-1 min-w-0 resize-none overflow-hidden bg-transparent text-[var(--text-primary)] focus:outline-none focus:ring-0 border-none placeholder:text-[var(--text-secondary)] text-base font-normal leading-normal py-2"
+          placeholder="Type a message or upload an image..." id="chat-input" autocomplete="off"/>
+        <input type="file" accept="image/*" class="hidden" id="image-input"/>
+        <button type="button" class="text-[var(--text-secondary)] hover:text-[var(--primary-color)] p-1 sm:p-2 rounded-full transition-colors duration-150" title="Add Emoji" id="emoji-btn">
+          <span class="material-symbols-outlined">mood</span>
+        </button>
+        <button type="button" class="text-[var(--text-secondary)] hover:text-[var(--primary-color)] p-1 sm:p-2 rounded-full transition-colors duration-150" title="Attach Image" id="attach-btn">
+          <span class="material-symbols-outlined">image</span>
+        </button>
+      </div>
+      <button type="submit" class="p-2 sm:p-3 bg-[var(--primary-color)] text-slate-50 rounded-xl shadow-md hover:bg-opacity-90 transition-all duration-150 active:scale-95" id="send-btn">
+        <span class="material-symbols-outlined">send</span>
+      </button>
+    </form>
+    <div class="h-1 bg-[var(--bg-main)]"></div>
+  </footer>
+</div>
+<div id="image-preview-modal" class="hidden"></div>
+<div class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 transition-opacity duration-300 opacity-0 pointer-events-none" id="settings-modal">
+  <div class="bg-[var(--bg-main)] w-full max-w-md rounded-xl shadow-2xl p-6 transform transition-all duration-300 scale-95">
+    <div class="flex items-center justify-between mb-6">
+      <h2 class="text-2xl font-bold text-[var(--text-primary)]">Settings</h2>
+      <button class="text-[var(--text-secondary)] hover:text-[var(--text-primary)] p-2 rounded-full transition-colors duration-150" id="close-modal-button">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="space-y-6">
+      <div>
+        <label class="block text-base text-[var(--text-primary)] font-medium mb-2" for="ai-model-select">AI Model</label>
+        <select class="form-select w-full rounded-xl border-slate-300 focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] text-[var(--text-primary)] bg-[var(--bg-input)]" id="ai-model-select"></select>
+      </div>
+      <div>
+        <label class="block text-base text-[var(--text-primary)] font-medium mb-2" for="theme-select">Theme</label>
+        <select class="form-select w-full rounded-xl border-slate-300 focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] text-[var(--text-primary)] bg-[var(--bg-input)]" id="theme-select">
+          <option value="default">Default</option>
+          <option value="ocean">Ocean Blue</option>
+          <option value="forest">Forest Green</option>
+          <option value="sunset">Sunset Orange</option>
+        </select>
+      </div>
+      <div class="flex items-center justify-between">
+        <label class="text-base text-[var(--text-primary)] font-medium" for="dark-mode-toggle">Dark Mode</label>
+        <button class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2 bg-slate-200 data-[checked]:bg-[var(--primary-color)]" id="dark-mode-toggle">
+          <span class="sr-only">Enable dark mode</span>
+          <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out translate-x-1 data-[checked]:translate-x-6"></span>
+        </button>
+      </div>
+      <div class="flex items-center justify-between">
+        <label class="text-base text-[var(--text-primary)] font-medium" for="notifications-toggle">Notifications</label>
+        <button class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[var(--primary-color)] focus:ring-offset-2 bg-slate-200 data-[checked]:bg-[var(--primary-color)]" data-checked="" id="notifications-toggle">
+          <span class="sr-only">Enable notifications</span>
+          <span class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform duration-200 ease-in-out translate-x-1 data-[checked]:translate-x-6"></span>
+        </button>
+      </div>
+      <div>
+        <label class="block text-base text-[var(--text-primary)] font-medium mb-2" for="language-select">Language</label>
+        <select class="form-select w-full rounded-xl border-slate-300 focus:border-[var(--primary-color)] focus:ring-[var(--primary-color)] text-[var(--text-primary)] bg-[var(--bg-input)]" id="language-select">
+          <option value="en">English</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+        </select>
+      </div>
+      <button class="w-full bg-[var(--primary-color)] text-white font-semibold py-3 px-4 rounded-xl hover:bg-opacity-90 transition-colors duration-150 active:scale-95" id="save-settings-btn">
+        Save Changes
+      </button>
+    </div>
+  </div>
+</div>
+<script>
+  // --- Model List ---
+  const modelListRaw = [
+    {"name":"bidara","description":"BIDARA - Biomimetic Designer and Research Assistant by NASA","provider":"Azure","community":true,"input_modalities":["text","image"],"output_modalities":["text"],"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false},
+    {"name":"deepseek","description":"DeepSeek-V3","provider":"Azure","tier":"seed","community":false,"aliases":"deepseek-v3","input_modalities":["text"],"output_modalities":["text"],"tools":false,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"deepseek-reasoning","description":"DeepSeek R1-0528","reasoning":true,"provider":"Azure","tier":"seed","community":false,"aliases":"deepseek-r1-0528","input_modalities":["text"],"output_modalities":["text"],"tools":false,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"elixposearch","description":"ElixpoSearch - Custom search-enhanced AI model","provider":"Scaleway","tier":"seed","community":true,"input_modalities":["text"],"output_modalities":["text"],"tools":false,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"evil","description":"Evil","provider":"Cloudflare","uncensored":true,"tier":"flower","community":true,"input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false},
+    {"name":"grok","description":"xAi Grok-3 Mini","provider":"Azure","tier":"seed","community":false,"aliases":"grok-3-mini","input_modalities":["text"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"hypnosis-tracy","description":"Hypnosis Tracy 7B","provider":"Azure","tier":"seed","community":true,"input_modalities":["text","audio"],"output_modalities":["audio","text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":true},
+    {"name":"llamascout","description":"Llama 4 Scout 17B","provider":"Cloudflare","community":false,"aliases":"llama-4-scout-17b-16e-instruct","input_modalities":["text"],"output_modalities":["text"],"tools":false,"pricing":{"prompt_tokens":0.00027,"completion_tokens":0.00085},"vision":false,"audio":false},
+    {"name":"midijourney","description":"Midijourney","provider":"Azure","community":true,"input_modalities":["text"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"MiREXA","description":"MiREXA AI Companion (GPT-4.1)","provider":"Azure","tier":"seed","community":true,"input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false},
+    {"name":"mistral","description":"Mistral Small 3.1 24B","provider":"Cloudflare","community":false,"aliases":"mistral-small-3.1-24b-instruct","input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.002,"completion_tokens":0.006},"vision":true,"audio":false},
+    {"name":"openai","description":"GPT-4.1-mini","provider":"Azure","tier":"seed","community":false,"aliases":"gpt-4.1-mini","input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.0004,"completion_tokens":0.0016},"vision":true,"audio":false},
+    {"name":"openai-audio","description":"GPT-4o-audio-preview","voices":["alloy","echo","fable","onyx","nova","shimmer","coral","verse","ballad","ash","sage","amuch","dan"],"provider":"Azure","tier":"seed","community":false,"aliases":"gpt-4o-audio-preview","input_modalities":["text","image","audio"],"output_modalities":["audio","text"],"tools":true,"pricing":{"prompt_tokens":0.015,"completion_tokens":0.06},"vision":true,"audio":true},
+    {"name":"openai-fast","description":"GPT-4.1-nano","provider":"Azure","community":false,"aliases":"gpt-4.1-nano","input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.0001,"completion_tokens":0.0004},"vision":true,"audio":false},
+    {"name":"openai-large","description":"GPT-4.1","provider":"Azure","tier":"seed","community":false,"aliases":"gpt-4.1","input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.002,"completion_tokens":0.008},"vision":true,"audio":false},
+    {"name":"openai-reasoning","description":"OpenAI O3 (provided by chatwithmono.xyz)","reasoning":true,"provider":"chatwithmono.xyz","aliases":"o3,o3-mini","community":false,"input_modalities":["text","image"],"output_modalities":["text"],"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false},
+    {"name":"phi","description":"Phi-4 Instruct","provider":"Azure","community":false,"aliases":"phi-4-mini-instruct","input_modalities":["text","image","audio"],"output_modalities":["text"],"tools":false,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":true},
+    {"name":"qwen-coder","description":"Qwen 2.5 Coder 32B","provider":"Scaleway","community":false,"aliases":"qwen2.5-coder-32b-instruct","input_modalities":["text"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.0004,"completion_tokens":0.0012},"vision":false,"audio":false},
+    {"name":"rtist","description":"Rtist","provider":"Azure","community":true,"input_modalities":["text"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"searchgpt","description":"OpenAI GPT-4o mini search preview (provided by chatwithmono.xyz)","search":true,"provider":"chatwithmono.xyz","community":false,"aliases":"gpt-4o-mini-search","input_modalities":["text"],"output_modalities":["text"],"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":false,"audio":false},
+    {"name":"sur","description":"Sur AI Assistant (Mistral)","provider":"Cloudflare","tier":"seed","community":true,"input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false},
+    {"name":"unity","description":"Unity Unrestricted Agent (Mistral Small 3.1)","provider":"Cloudflare","uncensored":true,"tier":"seed","community":true,"input_modalities":["text","image"],"output_modalities":["text"],"tools":true,"pricing":{"prompt_tokens":0.001,"completion_tokens":0.003},"vision":true,"audio":false}
+  ];
+  // Exclude evil, unity, openai-audio
+  const modelList = modelListRaw.filter(m =>
+    !["evil", "unity", "openai-audio"].includes(m.name)
+  );
+  // --- UI State ---
+  let chatHistory = [];
+  let botProfile = {
+    name: "Medico AI",
+    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDA2zMFflZMX0yH2raV3jDmJoiIaniaEGfHwWBAxiCNj2p7mACiIS6z03ZBUZt_FCdV8oYl9PAKNx8MQXwHSKaDgSlg0EtfWwHq9kNU8NxlT7s2D2jezaZDHGpmJshb7SO9ucfGufsv4CxS0rsPH-rT5JUAokXu-f-A3IrNsaBn7BPZx76qLZ-arQErnlNvIUWOX_GnzV9vrdRfqTMg9y76yhV4NxC7VO_tHtkUG78h8o2pNSRrt2ACfvSvxbKaK9khkDUaZhkWtMn5"
+  };
+  let userProfile = {
+    name: "You",
+    avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuBfk5933YtkBOtkQpGH3_7EtFisHR7Ot-x9zsVH_rPhRpg2DzV4n1IwY5SzKB6Gav-ruwYzJF0O56r2Y8neLcOgruw3A6-JcD_R9Uvar6zaQpK0eN261sjAkwL5l6tBKNBajnlsZunSRlVwToZFd_1REXr5mAD53Tj947biiYbPae9mbswcQbxR6u3MS-1qY9yA9wj3phoL27hVR4xbqLzW0nqaClLYv9JfybXxWW4oO3DyBwWY0EpByFJFJkp_mh0zHohSoqSZm4A2"
+  };
+  let settings = {
+    aiModel: localStorage.getItem('aiModel') || "mistral",
+    theme: localStorage.getItem('theme') || "default",
+    darkMode: localStorage.getItem('darkMode') === 'true',
+    notifications: localStorage.getItem('notifications') !== 'false',
+    language: localStorage.getItem('language') || "en"
+  };
+  let systemPrompt = `Medico AI is a cutting-edge medical assistant designed to support medical students in studying, clinical reasoning, exam preparation, and medical research. It delivers detailed, evidence-based, and current medical knowledge, always citing authoritative sources and providing clear, comprehensive explanations. Medico AI excels in analyzing images, illustrating concepts visually, and simulating clinical scenarios to enhance learning. It offers assistance with multiple-choice questions (MCQs), Objective Structured Clinical Examinations (OSCEs), case discussions, and more. The AI ensures clarity by acknowledging uncertainties and strictly refrains from providing real patient care advice.
+
+---
+When responding, if you mention mathematical, physics, or scientific symbols and formulas, use LaTeX markdown format. For example, use:
+- \`+\` (\( + \)), \`-\` (\( - \)), \`\\times\` (\( \\times \)), \`\\cdot\` (\( \\cdot \)), \`\\div\` (\( \\div \)), \`/\` (\( / \)), \`=\` (\( = \)), \`\\neq\` (\( \\neq \)), \`\\approx\` (\( \\approx \)), \`\\pm\` (\( \\pm \)), \`\\mp\` (\( \\mp \)), \`\\infty\` (\( \\infty \)), \`\\sqrt{}\` (\( \\sqrt{} \)), \`\\propto\` (\( \\propto \))
+- \`<\` (\( < \)), \`>\` (\( > \)), \`\\leq\` (\( \\leq \)), \`\\geq\` (\( \\geq \))
+- \`\\in\` (\( \\in \)), \`\\notin\` (\( \\notin \)), \`\\subset\` (\( \\subset \)), \`\\subseteq\` (\( \\subseteq \)), \`\\cup\` (\( \\cup \)), \`\\cap\` (\( \\cap \)), \`\\emptyset\` (\( \\emptyset \)), \`\\forall\` (\( \\forall \)), \`\\exists\` (\( \\exists \)), \`\\neg\` (\( \\neg \)), \`\\wedge\` (\( \\wedge \)), \`\\vee\` (\( \\vee \)), \`\\Rightarrow\` (\( \\Rightarrow \)), \`\\Leftrightarrow\` (\( \\Leftrightarrow \))
+- \`\\partial\` (\( \\partial \)), \`\\nabla\` (\( \\nabla \)), \`\\int\` (\( \\int \)), \`\\iint\` (\( \\iint \)), \`\\iiint\` (\( \\iiint \)), \`\\oint\` (\( \\oint \)), \`d\` (\( d \)), \`\\vec{}\` (\( \\vec{} \)), \`|\\cdot|\` (\( |\\cdot| \)), \`\\det\` (\( \\det \)), \`\\hbar\` (\( \\hbar \)), \`\\Delta\` (\( \\Delta \)), \`\\perp\` (\( \\perp \)), \`\\parallel\` (\( \\parallel \)), \`\\angle\` (\( \\angle \)), \`\\hat{}\` (\( \\hat{} \)), \`\\dots\` (\( \\dots \)), \`\\therefore\` (\( \\therefore \)), \`\\because\` (\( \\because \)), \`\\aleph_0\` (\( \\aleph_0 \)), \`| \\cdot |\` (\( | \\cdot | \))
+Always wrap LaTeX expressions in single dollar signs (\$ ... \$) for inline math, or double dollar signs (\$\$ ... \$\$) for block math.
+
+Created and maintained by Sukhdev Singh, a computer science professional passionate about integrating technology with medical education. Connect with Sukhdev on GitHub at https://github.com/sukhdevr898 and Instagram @sukh_rai898. For inquiries or support, contact via email: sukhdevr898@gmail.com,  projects by Sukhdev Singh:
+
+Medico AI  
+AI-898 dashboard  
+Vision model  
+AI Deep research  
+Medical advisor for girl's problems  
+Timeline 898 (students)  
+AI-898 Chatbot (with Google collaboration)
+
+This tool was created for Chhaya Rathod a mbbs student and special person for sukhdev.
+ .
+`;
+
+  // --- DOM ---
+  const chatList = document.getElementById('chat-list');
+  const chatForm = document.getElementById('chat-form');
+  const chatInput = document.getElementById('chat-input');
+  const imageInput = document.getElementById('image-input');
+  const settingsButton = document.getElementById('settings-button');
+  const closeModalButton = document.getElementById('close-modal-button');
+  const settingsModal = document.getElementById('settings-modal');
+  const darkModeToggle = document.getElementById('dark-mode-toggle');
+  const notificationsToggle = document.getElementById('notifications-toggle');
+  const aiModelSelect = document.getElementById('ai-model-select');
+  const themeSelect = document.getElementById('theme-select');
+  const languageSelect = document.getElementById('language-select');
+  const saveSettingsBtn = document.getElementById('save-settings-btn');
+  const clearChatBtn = document.getElementById('clear-chat-btn');
+  const exportPdfBtn = document.getElementById('export-pdf-btn');
+  const attachBtn = document.getElementById('attach-btn');
+  const imagePreviewModal = document.getElementById('image-preview-modal');
+
+  // --- Theme logic ---
+  function applyTheme(theme) {
+    const root = document.documentElement;
+    if (theme === "ocean") {
+      root.style.setProperty("--primary-color", "#0ea5e9");
+      root.style.setProperty("--chat-bg-user", "#0ea5e9");
+      root.style.setProperty("--accent-color", "#bae6fd");
+    } else if (theme === "forest") {
+      root.style.setProperty("--primary-color", "#059669");
+      root.style.setProperty("--chat-bg-user", "#059669");
+      root.style.setProperty("--accent-color", "#bbf7d0");
+    } else if (theme === "sunset") {
+      root.style.setProperty("--primary-color", "#f59e42");
+      root.style.setProperty("--chat-bg-user", "#f59e42");
+      root.style.setProperty("--accent-color", "#fed7aa");
+    } else {
+      root.style.setProperty("--primary-color", "#0c7ff2");
+      root.style.setProperty("--chat-bg-user", "#0c7ff2");
+      root.style.setProperty("--accent-color", "#e0f2fe");
+    }
+  }
+  function applyDarkMode(enabled) {
+    if (enabled) {
+      document.body.classList.add("dark");
+      document.body.style.background = "#181f29";
+      document.documentElement.style.setProperty("--bg-main", "#181f29");
+      document.documentElement.style.setProperty("--bg-input", "#232c3a");
+      document.documentElement.style.setProperty("--chat-bg-bot", "#232c3a");
+      document.documentElement.style.setProperty("--text-primary", "#f3f6fa");
+      document.documentElement.style.setProperty("--text-secondary", "#a5b8cf");
+    } else {
+      document.body.classList.remove("dark");
+      document.body.style.background = "";
+      document.documentElement.style.setProperty("--bg-main", "#f8fafc");
+      document.documentElement.style.setProperty("--bg-input", "#e7edf4");
+      document.documentElement.style.setProperty("--chat-bg-bot", "#e7edf4");
+      document.documentElement.style.setProperty("--text-primary", "#0d141c");
+      document.documentElement.style.setProperty("--text-secondary", "#49739c");
+    }
+  }
+
+  // --- Modal logic ---
+  function openModal() {
+    settingsModal.classList.remove('opacity-0', 'pointer-events-none');
+    settingsModal.querySelector('div').classList.remove('scale-95');
+  }
+  function closeModal() {
+    settingsModal.classList.add('opacity-0');
+    settingsModal.querySelector('div').classList.add('scale-95');
+    setTimeout(() => {
+      settingsModal.classList.add('pointer-events-none');
+    }, 300);
+  }
+  function toggleSwitch(buttonElement) {
+    const isChecked = buttonElement.hasAttribute('data-checked');
+    if (isChecked) {
+      buttonElement.removeAttribute('data-checked');
+    } else {
+      buttonElement.setAttribute('data-checked', '');
+    }
+  }
+  settingsButton.addEventListener('click', openModal);
+  closeModalButton.addEventListener('click', closeModal);
+  settingsModal.addEventListener('click', (event) => {
+    if (event.target === settingsModal) closeModal();
+  });
+  darkModeToggle.addEventListener('click', () => {
+    toggleSwitch(darkModeToggle);
+    settings.darkMode = !settings.darkMode;
+    applyDarkMode(settings.darkMode);
+    localStorage.setItem('darkMode', settings.darkMode);
+  });
+  notificationsToggle.addEventListener('click', () => {
+    toggleSwitch(notificationsToggle);
+    settings.notifications = !settings.notifications;
+    localStorage.setItem('notifications', settings.notifications);
+  });
+
+  // --- Settings form: Model select ---
+  function renderModelSelect() {
+    aiModelSelect.innerHTML = modelList.map(model =>
+      `<option value="${model.name}" ${settings.aiModel === model.name ? "selected" : ""}>
+        ${model.description || model.name}
+      </option>`
+    ).join("");
+  }
+  renderModelSelect();
+
+  themeSelect.value = settings.theme;
+  languageSelect.value = settings.language;
+  if (settings.darkMode) darkModeToggle.setAttribute('data-checked','');
+  if (settings.notifications) notificationsToggle.setAttribute('data-checked','');
+
+  aiModelSelect.addEventListener('change', e => {
+    settings.aiModel = e.target.value;
+    localStorage.setItem('aiModel', settings.aiModel);
+  });
+  themeSelect.addEventListener('change', e => {
+    settings.theme = e.target.value;
+    applyTheme(settings.theme);
+    localStorage.setItem('theme', settings.theme);
+  });
+  languageSelect.addEventListener('change', e => {
+    settings.language = e.target.value;
+    localStorage.setItem('language', settings.language);
+  });
+  saveSettingsBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeModal();
+  });
+
+  // --- Chat rendering ---
+  function renderChat() {
+    chatList.innerHTML = '';
+    for (let idx = 0; idx < chatHistory.length; idx++) {
+      const msg = chatHistory[idx];
+      const isUser = msg.role === "user";
+      const profile = isUser ? userProfile : botProfile;
+      const align = isUser ? "justify-end" : "";
+      const bubbleClass = isUser ? "chat-bubble-user" : "chat-bubble-bot";
+      const name = profile.name;
+      const avatar = profile.avatar;
+      let imageThumbs = "";
+      if (msg.images && msg.images.length) {
+        imageThumbs = `<div class="flex flex-wrap gap-2 mt-2">` +
+          msg.images.map((img, i) =>
+            `<img src="${img}" class="image-thumb" alt="Preview" data-preview-idx="${i}" data-msg-idx="${idx}"/>`
+          ).join("") +
+          `</div>`;
+      }
+      let audioHtml = "";
+      if (msg.audio) {
+        audioHtml = `<audio controls class="mt-2"><source src="${msg.audio}" type="audio/mpeg"></audio>`;
+      }
+      let contentHtml = "";
+      if (msg.typing) {
+        contentHtml = `<span class="flex items-center gap-1">
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+          <span class="typing-dot"></span>
+        </span>`;
+      } else if (msg.content) {
+        contentHtml = `<div class="markdown-body">${marked.parse(msg.content)}</div>`;
+      }
+      // Copy button for bot responses
+      let copyBtn = '';
+      if (!isUser && msg.content && !msg.typing) {
+        copyBtn = `<button class="copy-btn" title="Copy response" data-copy-idx="${idx}">
+          <span class="material-symbols-outlined" style="font-size:18px;">content_copy</span>
+        </button>`;
+      }
+      const msgHtml = `
+        <div class="flex items-end gap-2 sm:gap-3 ${align} animate-fadeInUp relative">
+          ${!isUser ? `<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-9 h-9 sm:w-10 sm:h-10 shrink-0 shadow-sm" style="background-image: url('${avatar}');"></div>` : ""}
+          <div class="flex flex-1 flex-col gap-1 items-${isUser ? "end" : "start"} max-w-[90vw] sm:max-w-[80vw] relative">
+            <p class="text-[var(--text-secondary)] text-xs font-medium">${name}</p>
+            <div class="${bubbleClass} text-base font-normal leading-relaxed max-w-full px-3 sm:px-4 py-2 sm:py-3 shadow-sm transition-transform duration-300 ease-out hover:scale-[1.02] break-words relative">
+              ${copyBtn}
+              ${contentHtml}
+            </div>
+            ${msg.image ? `<img src="${msg.image}" class="mt-2 rounded-lg max-w-xs shadow" alt="Generated image"/>` : ""}
+            ${imageThumbs}
+            ${audioHtml}
+          </div>
+          ${isUser ? `<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full w-9 h-9 sm:w-10 sm:h-10 shrink-0 shadow-sm" style="background-image: url('${avatar}');"></div>` : ""}
+        </div>
+      `;
+      chatList.insertAdjacentHTML('beforeend', msgHtml);
+    }
+    chatList.querySelectorAll(".image-thumb").forEach(img => {
+      img.onclick = (e) => {
+        const msgIdx = Number(img.dataset.msgIdx);
+        const imgIdx = Number(img.dataset.previewIdx);
+        const msg = chatHistory[msgIdx];
+        if (!msg || !msg.images) return;
+        showImagePreview(msg.images, imgIdx);
+      };
+    });
+    // Copy button logic
+    chatList.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.onclick = (e) => {
+        const idx = btn.getAttribute('data-copy-idx');
+        const msg = chatHistory[Number(idx)];
+        if (!msg || !msg.content) return;
+        // Copy the original markdown including LaTeX
+        navigator.clipboard.writeText(msg.content).then(() => {
+          btn.classList.add('copied');
+          btn.innerHTML = `<span class="material-symbols-outlined">check</span>`;
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = `<span class="material-symbols-outlined" style="font-size:18px;">content_copy</span>`;
+          }, 1200);
+        });
+      };
+    });
+    setTimeout(() => {
+      chatList.scrollTop = chatList.scrollHeight;
+      chatList.parentElement.scrollTop = chatList.parentElement.scrollHeight;
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        MathJax.typesetPromise(Array.from(chatList.querySelectorAll('.markdown-body'))).catch(() => {});
+      }
+    }, 20);
+  }
+
+  function showImagePreview(images, idx) {
+    imagePreviewModal.className = "image-preview-modal";
+    imagePreviewModal.innerHTML = `
+      <div class="absolute inset-0" style="z-index:0"></div>
+      <div class="relative flex flex-col items-center" style="z-index:1">
+        <img src="${images[idx]}" class="image-preview-img" alt="Preview"/>
+        <div class="flex gap-2 mt-4 justify-center">
+          ${images.map((img, i) =>
+            `<img src="${img}" class="w-10 h-10 rounded border-2 ${i===idx?"border-[var(--primary-color)]":"border-slate-300"} object-cover cursor-pointer" style="box-shadow:0 1px 3px #0002" data-preview-idx="${i}"/>`
+          ).join("")}
+        </div>
+        <button class="absolute top-2 right-2 bg-black/50 text-white rounded-full p-2 hover:bg-black/80" style="z-index:2" id="close-image-preview">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+    `;
+    imagePreviewModal.onclick = (e) => {
+      if (e.target === imagePreviewModal || e.target.id === "close-image-preview") {
+        imagePreviewModal.className = "hidden";
+        imagePreviewModal.innerHTML = "";
+      } else if (e.target.dataset && e.target.dataset.previewIdx !== undefined) {
+        showImagePreview(images, Number(e.target.dataset.previewIdx));
+      }
+    };
+  }
+
+  // --- Advanced MCP API integration (separate endpoint) ---
+  async function askMCP(prompt, opts = {}) {
+    // Change the URL to your PHP endpoint location:
+    const mcpUrl = "./mcp-server.php";
+    // Memory: send recent chat (last 10 exchanges, user+assistant)
+    const recentHistory = chatHistory.slice(-20).filter(m => m.role === "user" || m.role === "assistant")
+      .map(m => ({
+        role: m.role,
+        content: m.content || "",
+        images: m.images || []
+      }));
+    try {
+      const res = await fetch(mcpUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt,
+          images: opts.visionImages || [],
+          system_prompt: systemPrompt,
+          language: settings.language,
+          model: settings.aiModel,
+          memory: recentHistory
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { content: data.content || "No response from MCP server." };
+      }
+      return { content: "Error contacting MCP server." };
+    } catch (e) {
+      return { content: "Could not reach MCP server." };
+    }
+  }
+
+  // --- Pollinations.ai fallback ---
+  async function askPollinations(prompt, opts = {}) {
+    if (opts.visionImages && opts.visionImages.length) {
+      const contentArr = [{ type: "text", text: prompt }];
+      for (const img of opts.visionImages) {
+        contentArr.push({
+          type: "image_url",
+          image_url: { url: img.startsWith("data:") ? img : "data:image/jpeg;base64," + img }
+        });
+      }
+      const payload = {
+        model: settings.aiModel,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: contentArr }
+        ],
+        max_tokens: 600
+      };
+      const res = await fetch("https://text.Pollinations.ai/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return { content: data.choices?.[0]?.message?.content || "No response." };
+      }
+      return { content: "Error contacting AI vision endpoint." };
+    }
+    // Text (GET)
+    let url = "https://text.Pollinations.ai/" + encodeURIComponent(prompt);
+    const params = new URLSearchParams();
+    params.set("model", settings.aiModel || "mistral");
+    if (settings.language && settings.language !== "en") params.set("system", "Respond in " + languageSelect.options[languageSelect.selectedIndex].text);
+    url += "?" + params.toString();
+    const res = await fetch(url);
+    if (res.ok) {
+      const txt = await res.text();
+      return { content: txt };
+    } else {
+      return { content: "Sorry, there was an error contacting the AI." };
+    }
+  }
+  async function generateImage(prompt, opts = {}) {
+    let url = "https://image.Pollinations.ai/prompt/" + encodeURIComponent(prompt);
+    const params = new URLSearchParams();
+    if (opts.model) params.set("model", opts.model);
+    if (opts.width) params.set("width", opts.width);
+    if (opts.height) params.set("height", opts.height);
+    params.set("nologo", "true");
+    url += "?" + params.toString();
+    return url;
+  }
+
+  // --- Image file to base64 ---
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // --- Chat Store (localStorage) ---
+  function saveChat() {
+    localStorage.setItem('medico_ai_chat', JSON.stringify(chatHistory));
+  }
+  function loadChat() {
+    try {
+      const data = JSON.parse(localStorage.getItem('medico_ai_chat'));
+      if (Array.isArray(data)) chatHistory = data;
+    } catch(e) { }
+  }
+
+  // --- Chat form logic ---
+  let pendingImages = [];
+  attachBtn.addEventListener('click', () => imageInput.click());
+  imageInput.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) continue;
+      const dataUrl = await fileToBase64(file);
+      pendingImages.push(dataUrl);
+    }
+    renderPendingImages();
+    imageInput.value = "";
+  });
+
+  function renderPendingImages() {
+    let previewBar = document.getElementById("pending-image-bar");
+    if (!previewBar) {
+      previewBar = document.createElement("div");
+      previewBar.id = "pending-image-bar";
+      previewBar.className = "flex gap-2 p-2 pb-0";
+      chatForm.parentElement.insertBefore(previewBar, chatForm);
+    }
+    previewBar.innerHTML = pendingImages.map((img, i) =>
+      `<div class="relative group">
+        <img src="${img}" class="image-thumb" alt="Pending"/>
+        <button type="button" title="Remove" class="absolute -top-1 -right-1 bg-black/60 text-white rounded-full p-0.5 text-xs opacity-80 group-hover:opacity-100" onclick="this.parentElement.remove();window.removePendingImage(${i})">
+          <span class="material-symbols-outlined" style="font-size:18px;">close</span>
+        </button>
+      </div>`
+    ).join("");
+  }
+  window.removePendingImage = function(i) {
+    pendingImages.splice(i, 1);
+    renderPendingImages();
+  };
+
+  async function sendMessage(text, images) {
+    const userMsg = { role: "user", content: text, images: images.slice() };
+    chatHistory.push(userMsg);
+    saveChat();
+    renderChat();
+    chatInput.value = "";
+    pendingImages = [];
+    const previewBar = document.getElementById("pending-image-bar");
+    if (previewBar) previewBar.remove();
+
+    const botMsg = { role: "assistant", typing: true };
+    chatHistory.push(botMsg);
+    renderChat();
+
+    // Use MCP server if selected, else fallback
+    let aiRes;
+    if (settings.aiModel) {
+      aiRes = await askMCP(text, { visionImages: userMsg.images });
+    } else {
+      aiRes = await askPollinations(text, { visionImages: userMsg.images });
+    }
+    Object.assign(botMsg, aiRes);
+    delete botMsg.typing;
+    saveChat();
+    renderChat();
+  }
+
+  chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = chatInput.value.trim();
+    if (!text && !pendingImages.length) return;
+    sendMessage(text, pendingImages);
+  });
+
+  clearChatBtn.addEventListener('click', () => {
+    if (confirm("Clear all chat history?")) {
+      chatHistory = [
+        { role: "assistant", content: "Hi, I'm **Medico AI**. I'm here to help you with medical studies, exam prep, clinical reasoning, and more. Ask me anything about medicine, upload images (like ECGs, X-rays), or request explanations in Markdown. Let's get started!" }
+      ];
+      saveChat();
+      renderChat();
+    }
+  });
+
+  exportPdfBtn.addEventListener('click', () => {
+    window.print();
+  });
+
+  // --- Initial state: welcome or restore ---
+  loadChat();
+  if (!chatHistory.length) {
+    chatHistory.push({
+      role: "assistant",
+      content: "Hi, I'm **Medico AI**. I'm here to help you with medical studies, exam prep, clinical reasoning, and more. Ask me anything about medicine, upload images (like ECGs, X-rays), or request explanations in Markdown. Let's get started!"
+    });
+    saveChat();
+  }
+  renderChat();
+
+  applyTheme(settings.theme);
+  applyDarkMode(settings.darkMode);
+
+  window.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      openModal();
+    }
+  });
+  window.addEventListener('resize', () => {
+    setTimeout(() => {
+      chatList.parentElement.scrollTop = chatList.parentElement.scrollHeight;
+    }, 20);
+  });
+
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+    mangle: false,
+    headerIds: false
+  });
+</script>
+</body>
+</html>

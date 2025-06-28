@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=360, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Medico AI - Your Medical Study Companion</title>
+  <meta name="description" content="Medico AI: The trusted, secure, and free medical study companion for students.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    html, body {
+      scroll-behavior: smooth;
+      background: #f8fafc;
+      font-family: 'Inter', 'Poppins', Arial, sans-serif;
+      min-height: 100vh;
+      width: 100vw;
+      overflow-x: hidden;
+    }
+    #bg-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .fade-in {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.8s cubic-bezier(.4,0,.2,1), transform 0.8s cubic-bezier(.4,0,.2,1);
+    }
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .slide-up {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s cubic-bezier(.4,0,.2,1), transform 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    .slide-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .input-error { border-color: #ef4444 !important; }
+    .error-text { color: #ef4444; font-size: 0.85rem; }
+    .success-badge {
+      background: linear-gradient(90deg, #10B981 0%, #3B82F6 100%);
+      color: #fff;
+      font-weight: 600;
+      border-radius: 9999px;
+      padding: 0.18rem 0.8rem;
+      font-size: 0.85rem;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px 0 #3B82F622;
+      margin-left: 0.7rem;
+    }
+    .glass {
+      background: rgba(255,255,255,0.96);
+      box-shadow: 0 4px 24px 0 #3B82F620;
+      backdrop-filter: blur(2.5px);
+    }
+    .feature-icon-bg {
+      background: linear-gradient(120deg, #3B82F6 0%, #10B981 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px 0 #10B98122;
+    }
+    .feature-icon-bg2 {
+      background: linear-gradient(120deg, #10B981 0%, #3B82F6 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px 0 #3B82F622;
+    }
+    .feature-icon-bg3 {
+      background: linear-gradient(120deg, #F59E42 0%, #3B82F6 100%);
+      color: #fff;
+      box-shadow: 0 2px 8px 0 #F59E4222;
+    }
+    .feature-card {
+      min-width: 225px;
+      border-radius: 18px;
+      border: 1px solid #E0E7EF;
+      box-shadow: 0 2px 12px 0 #3B82F610;
+      background: #fff;
+      transition: transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s cubic-bezier(.4,0,.2,1);
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card:hover {
+      transform: translateY(-4px) scale(1.04);
+      box-shadow: 0 8px 32px 0 #10B98122;
+      border-color: #10B98144;
+    }
+    .feature-card .shine {
+      position: absolute;
+      top: -40px; left: -40px;
+      width: 180px; height: 60px;
+      background: linear-gradient(120deg,rgba(255,255,255,0.45) 0%,rgba(255,255,255,0) 100%);
+      transform: rotate(-20deg);
+      pointer-events: none;
+      z-index: 1;
+      opacity: 0.5;
+      animation: shineAnim 2.5s infinite linear;
+      animation-delay: calc(var(--shine-delay, 0s));
+    }
+    @keyframes shineAnim {
+      0% { left: -40px; opacity: 0.2;}
+      40% { opacity: 0.55;}
+      80% { left: 120px; opacity: 0.2;}
+      100% { left: 120px; opacity: 0;}
+    }
+    .input-label {
+      font-size: 0.98rem;
+      color: #374151;
+      font-weight: 500;
+      margin-bottom: 0.3rem;
+      letter-spacing: 0.01em;
+    }
+    .input-group {
+      margin-bottom: 0.9rem;
+    }
+    .input-group:last-child {
+      margin-bottom: 0;
+    }
+    .input-hint {
+      font-size: 0.81rem;
+      color: #6B7280;
+      margin-top: 0.13rem;
+    }
+    .contact-success-anim {
+      animation: popsuccess 0.7s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes popsuccess {
+      0% { opacity: 0; transform: scale(0.85);}
+      80% { opacity: 1; transform: scale(1.05);}
+      100% { opacity: 1; transform: scale(1);}
+    }
+    .divider {
+      height: 2px;
+      width: 100%;
+      background: linear-gradient(90deg, #10B981 0%, #3B82F6 100%);
+      border-radius: 1px;
+      margin: 1.7rem 0 1.2rem 0;
+      opacity: .19;
+    }
+    @media (max-width: 400px) {
+      .feature-card { min-width: 180px; }
+    }
+    .btn-gradient {
+      background: linear-gradient(90deg, #10B981 0%, #3B82F6 100%);
+      transition: background 0.3s, transform 0.17s;
+    }
+    .btn-gradient:hover {
+      background: linear-gradient(90deg, #3B82F6 0%, #10B981 100%);
+      transform: scale(1.05) translateY(-2px);
+      box-shadow: 0 4px 24px 0 #10B98133;
+    }
+    .btn-gradient:active { transform: scale(0.97); }
+    .section-header {
+      font-size: 1.25rem;
+      font-family: 'Poppins',sans-serif;
+      font-weight: 700;
+      color: #1e293b;
+      margin-bottom: 0.5rem;
+      letter-spacing: 0.01em;
+      text-align: left;
+    }
+    .features-scroll::-webkit-scrollbar { height: 0; }
+    .features-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="relative w-full min-h-screen bg-[#f8fafc] text-[#374151] overflow-x-hidden">
+
+  <canvas id="bg-canvas"></canvas>
+
+  <main class="relative z-10 flex flex-col min-h-screen w-full max-w-[430px] mx-auto">
+
+    <!-- Header -->
+    <header class="flex flex-col items-center justify-center pt-8 pb-3 px-5">
+      <div class="flex items-center mb-2">
+        <span class="inline-block rounded-full bg-[#3B82F6]/10 p-3 mr-2">
+          <svg width="32" height="32" fill="none" aria-hidden="true" viewBox="0 0 32 32">
+            <rect width="32" height="32" rx="8" fill="#3B82F6" fill-opacity="0.12"/>
+            <path d="M11.5 8v7a4.5 4.5 0 1 0 9 0V8m-9 0h-2m11 0h2m-6 15v2m0 0a3 3 0 0 0 6 0v-1.5a1.5 1.5 0 1 0-3 0V25" stroke="#3B82F6" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="text-2xl font-bold text-[#3B82F6] tracking-tight" style="font-family:'Poppins',sans-serif;">
+          Medico <span class="text-[#10B981]">AI</span>
+        </span>
+        <span class="success-badge ml-2">For Students</span>
+      </div>
+      <h2 class="text-lg font-semibold text-[#374151] text-center fade-in" id="tagline" style="font-family:'Poppins',sans-serif;">
+        Medico AI - Your Medical Study Companion
+      </h2>
+      <p class="text-sm text-[#64748B] text-center mt-1 max-w-[340px] fade-in" id="desc1" style="font-family:'Inter',sans-serif;">
+        Secure, free, and tailored for medical students. Study, revise, and get real medical advice with 10+ advanced models.
+      </p>
+      <a id="getStartedBtn"
+        class="mt-5 px-7 py-3 btn-gradient text-white font-semibold rounded-xl shadow-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#10B981]/40"
+        style="font-family:'Inter',sans-serif;"
+        href="medico.html">
+        Get Started
+      </a>
+    </header>
+
+    <!-- Animated Illustration -->
+    <section class="w-full flex justify-center items-center mb-3 px-5">
+      <div class="w-full rounded-2xl glass p-4 flex flex-col items-center shadow-sm">
+        <svg width="124" height="90" viewBox="0 0 124 90" fill="none" class="rounded-xl" aria-hidden="true">
+          <g>
+            <rect x="8" y="60" width="38" height="15" rx="6" fill="#3B82F6" fill-opacity="0.13"/>
+            <rect x="18" y="66" width="38" height="13" rx="6" fill="#10B981" fill-opacity="0.13"/>
+            <rect x="30" y="72" width="38" height="11" rx="6" fill="#3B82F6" fill-opacity="0.13"/>
+            <g id="brain">
+              <ellipse cx="92" cy="35" rx="17" ry="12" fill="#F3F4F6"/>
+              <ellipse cx="86" cy="33" rx="5" ry="4" fill="#3B82F6" fill-opacity="0.18"/>
+              <ellipse cx="99" cy="36" rx="4" ry="3" fill="#10B981" fill-opacity="0.19"/>
+              <ellipse cx="92" cy="39" rx="7" ry="5" fill="#3B82F6" fill-opacity="0.13"/>
+              <path d="M84 40 Q92 30 100 40" stroke="#3B82F6" stroke-width="1.5" fill="none"/>
+              <animateTransform attributeName="transform" type="translate" values="0 0; 0 2; 0 0" dur="2s" repeatCount="indefinite"/>
+            </g>
+            <rect x="60" y="15" width="15" height="15" rx="4" fill="#10B981" fill-opacity="0.19"/>
+            <rect x="65" y="19" width="5" height="7" rx="2" fill="#3B82F6"/>
+            <rect x="62" y="22" width="11" height="3" rx="1.5" fill="#3B82F6"/>
+            <g>
+              <rect x="80" y="60" width="30" height="15" rx="5" fill="#3B82F6" fill-opacity="0.09"/>
+              <rect x="85" y="65" width="5" height="7" rx="2" fill="#10B981">
+                <animate attributeName="height" values="7;12;7" dur="1.8s" repeatCount="indefinite"/>
+              </rect>
+              <rect x="93" y="63" width="5" height="9" rx="2" fill="#3B82F6">
+                <animate attributeName="height" values="9;15;9" dur="1.5s" repeatCount="indefinite"/>
+              </rect>
+              <rect x="101" y="68" width="5" height="4" rx="2" fill="#10B981">
+                <animate attributeName="height" values="4;10;4" dur="2.2s" repeatCount="indefinite"/>
+              </rect>
+            </g>
+          </g>
+        </svg>
+        <span class="text-xs text-[#3B82F6] mt-2" style="font-family:'Poppins',sans-serif;">Smarter, safer, student-focused AI.</span>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Features Section -->
+    <section class="w-full px-4 mt-1 mb-7">
+      <h3 class="section-header">Why Medico AI?</h3>
+      <div class="flex overflow-x-auto features-scroll no-scrollbar gap-4 pb-2">
+        <div class="feature-card slide-up" data-delay="0" style="min-width:225px;">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-user-md"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">10+ AI Medical Models</div>
+              <div class="text-xs text-[#64748B]">MCQ, Case, Flashcards, OSCE, USMLE, more!</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="100">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg2 flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-lock"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Privacy First</div>
+              <div class="text-xs text-[#64748B]">No tracking. No data sales. No logins.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="200">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg3 flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-bolt"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Instant Results</div>
+              <div class="text-xs text-[#64748B]">Lightning fast answers, always free.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="300">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-brain"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Exam-Ready</div>
+              <div class="text-xs text-[#64748B]">Board-style content, up-to-date Qbank.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="400">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg2 flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-heartbeat"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Human-Like Explanations</div>
+              <div class="text-xs text-[#64748B]">Explains concepts with real clinical logic.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="500">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg3 flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-book-medical"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Revision Tools</div>
+              <div class="text-xs text-[#64748B]">Flashcards, mnemonics, rapid recall.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="600">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-globe"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">Global Community</div>
+              <div class="text-xs text-[#64748B]">Used by students in 30+ countries.</div>
+            </div>
+          </div>
+        </div>
+        <div class="feature-card slide-up" data-delay="700">
+          <div class="shine"></div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="feature-icon-bg2 flex items-center justify-center rounded-lg w-10 h-10 text-xl">
+              <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <div>
+              <div class="font-semibold text-[#1e293b] text-base">100% Free</div>
+              <div class="text-xs text-[#64748B]">No subscriptions. No paywalls. Ever.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Animated Medical Chart Illustration -->
+    <section class="w-full flex justify-center items-center mb-4 px-5">
+      <div class="w-full rounded-2xl glass p-4 flex flex-col items-center shadow-sm">
+        <svg width="110" height="60" viewBox="0 0 110 60" fill="none" class="rounded-xl" aria-hidden="true">
+          <rect x="5" y="10" width="100" height="40" rx="10" fill="#10B981" fill-opacity="0.11"/>
+          <g id="pulse">
+            <polyline points="15,40 30,30 40,40 50,20 60,35 70,25 80,40 95,30" fill="none" stroke="#3B82F6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <animate attributeName="points" dur="2s" repeatCount="indefinite"
+                values="15,40 30,30 40,40 50,20 60,35 70,25 80,40 95,30;
+                        15,40 30,35 40,37 50,22 60,33 70,28 80,37 95,33;
+                        15,40 30,30 40,40 50,20 60,35 70,25 80,40 95,30"/>
+            </polyline>
+          </g>
+        </svg>
+        <span class="text-xs text-[#10B981] mt-2" style="font-family:'Poppins',sans-serif;">Track your learning progress visually.</span>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- Contact Form -->
+    <section class="w-full px-5 mt-1 mb-4">
+      <h3 class="section-header">Contact Us</h3>
+      <form id="contactForm" class="glass rounded-xl shadow-md p-5 flex flex-col gap-1" autocomplete="off" novalidate>
+        <div class="input-group">
+          <label for="name" class="input-label">Name</label>
+          <input type="text" name="name" id="name" placeholder="Your full name"
+            class="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] focus:border-[#3B82F6] transition-colors duration-200 outline-none text-base"
+            aria-label="Name" required autocomplete="off">
+          <div class="input-hint">Let us know how to address you.</div>
+          <div class="error-text hidden" id="nameError"></div>
+        </div>
+        <div class="input-group">
+          <label for="email" class="input-label">Email</label>
+          <input type="email" name="email" id="email" placeholder="you@email.com"
+            class="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] focus:border-[#10B981] transition-colors duration-200 outline-none text-base"
+            aria-label="Email" required autocomplete="off">
+          <div class="input-hint">We'll never share your email.</div>
+          <div class="error-text hidden" id="emailError"></div>
+        </div>
+        <div class="input-group">
+          <label for="message" class="input-label">Message</label>
+          <textarea name="message" id="message" rows="3" placeholder="How can we help you?"
+            class="w-full px-3 py-2 rounded-lg border border-[#E5E7EB] focus:border-[#3B82F6] transition-colors duration-200 outline-none text-base resize-none"
+            aria-label="Message" required></textarea>
+          <div class="input-hint">Ask us anything about Medico AI.</div>
+          <div class="error-text hidden" id="messageError"></div>
+        </div>
+        <button type="submit"
+          class="mt-1 px-5 py-2 btn-gradient text-white font-semibold rounded-lg shadow transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#3B82F6]/40"
+          style="font-family:'Inter',sans-serif;" id="submitBtn">
+          Send Message
+        </button>
+        <div id="formSuccess" class="hidden text-[#10B981] text-sm mt-2 font-semibold text-center contact-success-anim"></div>
+      </form>
+    </section>
+
+    <footer class="w-full px-5 pb-6 mt-auto">
+      <div class="flex flex-col items-center gap-2">
+        <div class="flex items-center gap-2">
+          <span class="font-semibold text-[#374151]" style="font-family:'Poppins',sans-serif;">Sukhdev Singh</span>
+          <span class="text-xs text-[#6B7280]">(Owner)</span>
+        </div>
+        <div class="flex gap-5 mt-1">
+          <a href="https://github.com/sukhdevr898" target="_blank" rel="noopener" aria-label="GitHub"
+            class="text-[#374151] hover:text-[#3B82F6] transition-colors duration-150 text-xl">
+            <i class="fab fa-github"></i>
+          </a>
+          <a href="https://instagram.com/sukh_rai898" target="_blank" rel="noopener" aria-label="Instagram"
+            class="text-[#374151] hover:text-[#E1306C] transition-colors duration-150 text-xl">
+            <i class="fab fa-instagram"></i>
+          </a>
+          <a href="https://t.me/sukhdevr898" target="_blank" rel="noopener" aria-label="Telegram"
+            class="text-[#374151] hover:text-[#229ED9] transition-colors duration-150 text-xl">
+            <i class="fab fa-telegram"></i>
+          </a>
+        </div>
+      </div>
+      <div class="text-center text-xs text-[#9CA3AF] mt-3">
+        &copy; 2024 Medico AI. All rights reserved.
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    document.body.style['-webkit-font-smoothing'] = 'antialiased';
+
+    // Fade-in animation for tagline and desc
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(() => {
+        document.getElementById('tagline').classList.add('visible');
+        setTimeout(() => {
+          document.getElementById('desc1').classList.add('visible');
+        }, 200);
+      }, 350);
+    });
+
+    // Feature cards entrance animation on scroll
+    function animateOnScroll() {
+      const cards = document.querySelectorAll('.slide-up');
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        if (rect.left < window.innerWidth - 20) {
+          setTimeout(() => card.classList.add('visible'), +card.dataset.delay || 0);
+        }
+      });
+    }
+    document.querySelector('.features-scroll').addEventListener('scroll', animateOnScroll);
+    window.addEventListener('DOMContentLoaded', animateOnScroll);
+
+    // Contact form validation + send.php AJAX
+    const contactForm = document.getElementById('contactForm');
+    const submitBtn = document.getElementById('submitBtn');
+    contactForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      let hasError = false;
+      // Name validation
+      const name = contactForm.name.value.trim();
+      const nameError = document.getElementById('nameError');
+      if (!name || name.length < 2) {
+        nameError.textContent = "Please enter your full name.";
+        nameError.classList.remove('hidden');
+        contactForm.name.classList.add('input-error');
+        hasError = true;
+      } else {
+        nameError.classList.add('hidden');
+        contactForm.name.classList.remove('input-error');
+      }
+      // Email validation
+      const email = contactForm.email.value.trim();
+      const emailError = document.getElementById('emailError');
+      if (!email || !/^[\w\.-]+@[\w\.-]+\.\w+$/.test(email)) {
+        emailError.textContent = "Enter a valid email address.";
+        emailError.classList.remove('hidden');
+        contactForm.email.classList.add('input-error');
+        hasError = true;
+      } else {
+        emailError.classList.add('hidden');
+        contactForm.email.classList.remove('input-error');
+      }
+      // Message validation
+      const message = contactForm.message.value.trim();
+      const messageError = document.getElementById('messageError');
+      if (!message || message.length < 5) {
+        messageError.textContent = "Please enter your message (at least 5 characters).";
+        messageError.classList.remove('hidden');
+        contactForm.message.classList.add('input-error');
+        hasError = true;
+      } else {
+        messageError.classList.add('hidden');
+        contactForm.message.classList.remove('input-error');
+      }
+      // Success
+      const formSuccess = document.getElementById('formSuccess');
+      if (!hasError) {
+        formSuccess.textContent = "Sending your message...";
+        formSuccess.classList.remove('hidden');
+        formSuccess.classList.add('contact-success-anim');
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Sending...";
+
+        // Send via send.php
+        const formData = new FormData(contactForm);
+        fetch('send.php', {
+          method: 'POST',
+          body: formData
+        })
+        .then(async res => {
+          let data;
+          try {
+            data = await res.json();
+          } catch (e) {
+            data = { success: false, error: "Server error. Please try again." };
+          }
+          if (data.success) {
+            formSuccess.textContent = data.message || "Thank you! Your message has been sent.";
+            formSuccess.classList.remove('hidden');
+            formSuccess.classList.add('contact-success-anim');
+            contactForm.reset();
+          } else {
+            formSuccess.textContent = data.error || "Failed to send. Please try again later.";
+            formSuccess.classList.remove('hidden');
+            formSuccess.classList.add('contact-success-anim');
+          }
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send Message";
+          setTimeout(() => { formSuccess.classList.add('hidden'); }, 3700);
+        })
+        .catch(() => {
+          formSuccess.textContent = "Server error, please try again later.";
+          formSuccess.classList.remove('hidden');
+          formSuccess.classList.add('contact-success-anim');
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Send Message";
+          setTimeout(() => { formSuccess.classList.add('hidden'); }, 3700);
+        });
+      }
+    });
+
+    // Hide error on input
+    ['name', 'email', 'message'].forEach(id => {
+      contactForm[id].addEventListener('input', () => {
+        document.getElementById(id + 'Error').classList.add('hidden');
+        contactForm[id].classList.remove('input-error');
+      });
+    });
+
+    // Background particles and hearts animation
+    const canvas = document.getElementById('bg-canvas');
+    let dpr = window.devicePixelRatio || 1;
+    function resizeCanvas() {
+      canvas.width = window.innerWidth * dpr;
+      canvas.height = window.innerHeight * dpr;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Generate particles & hearts
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let hearts = [];
+    function initParticles() {
+      particles = [];
+      hearts = [];
+      for (let i = 0; i < 66; i++) {
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          r: 1.1 + Math.random() * 1.8,
+          dx: (Math.random() - 0.5) * 0.17,
+          dy: (Math.random() - 0.5) * 0.14,
+          color: Math.random() > 0.6 ? '#3B82F6' : (Math.random() > 0.5 ? '#10B981' : '#F59E42'),
+          opacity: 0.12 + Math.random() * 0.17
+        });
+      }
+      for (let i = 0; i < 18; i++) {
+        hearts.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          size: 8 + Math.random() * 13,
+          speed: 0.08 + Math.random() * 0.14,
+          phase: Math.random() * Math.PI * 2,
+          opacity: 0.19 + Math.random() * 0.09
+        });
+      }
+    }
+    initParticles();
+    window.addEventListener('resize', initParticles);
+
+    function drawHeart(ctx, x, y, size, opacity) {
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.beginPath();
+      const topCurveHeight = size * 0.3;
+      ctx.moveTo(x, y + topCurveHeight);
+      ctx.bezierCurveTo(
+        x, y,
+        x - size / 2, y,
+        x - size / 2, y + topCurveHeight
+      );
+      ctx.bezierCurveTo(
+        x - size / 2, y + (size + topCurveHeight) / 2,
+        x, y + (size + topCurveHeight) / 1.2,
+        x, y + size
+      );
+      ctx.bezierCurveTo(
+        x, y + (size + topCurveHeight) / 1.2,
+        x + size / 2, y + (size + topCurveHeight) / 2,
+        x + size / 2, y + topCurveHeight
+      );
+      ctx.bezierCurveTo(
+        x + size / 2, y,
+        x, y,
+        x, y + topCurveHeight
+      );
+      ctx.closePath();
+      ctx.fillStyle = "#F43F5E";
+      ctx.shadowColor = "#F43F5E";
+      ctx.shadowBlur = 2;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function animateBG() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Particles
+      for (let p of particles) {
+        ctx.save();
+        ctx.globalAlpha = p.opacity;
+        ctx.beginPath();
+        ctx.arc(p.x * dpr, p.y * dpr, p.r * dpr, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 2 * dpr;
+        ctx.fill();
+        ctx.restore();
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0 || p.x > window.innerWidth) p.dx *= -1;
+        if (p.y < 0 || p.y > window.innerHeight) p.dy *= -1;
+      }
+      // Hearts
+      for (let h of hearts) {
+        let y = h.y + Math.sin(Date.now()/900 + h.phase) * 1.5;
+        drawHeart(ctx, h.x * dpr, y * dpr, h.size * dpr, h.opacity);
+        h.y -= h.speed;
+        h.x += Math.sin(Date.now()/1200 + h.phase) * 0.09;
+        if (h.y < -h.size) {
+          h.y = window.innerHeight + h.size;
+          h.x = Math.random() * window.innerWidth;
+        }
+      }
+      requestAnimationFrame(animateBG);
+    }
+    animateBG();
+  </script>
+
+</body>
+</html>
