@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medico AI - MCP Server Endpoint Tester</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .endpoint-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #007bff;
+        }
+        .endpoint-title {
+            color: #495057;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .endpoint-url {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background-color 0.3s;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .response-area {
+            background: #f1f3f4;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            border-left-color: #28a745;
+        }
+        .error {
+            border-left-color: #dc3545;
+        }
+        .method-get {
+            border-left-color: #28a745;
+        }
+        .method-post {
+            border-left-color: #ffc107;
+        }
+        .input-group {
+            margin: 10px 0;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .input-group input, .input-group select, .input-group textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 Medico AI - MCP Server Endpoint Tester</h1>
+        <p style="text-align: center; color: #6c757d;">Test the enhanced URL endpoints for the Medico AI MCP server</p>
+
+        <!-- Health Check -->
+        <div class="endpoint-section method-get">
+            <div class="endpoint-title">1. Health Check Endpoint</div>
+            <div class="endpoint-url">/mcp.php/health</div>
+            <button class="test-button" onclick="testEndpoint('health', 'GET')">Test Health Check</button>
+            <div id="response-health" class="response-area" style="display: none;"></div>
+        </div>
+
+        <!-- GET with URL Parameters -->
+        <div class="endpoint-section method-get">
+            <div class="endpoint-title">2. GET Request with URL Parameters</div>
+            <div class="input-group">
+                <label>Question:</label>
+                <input type="text" id="get-prompt" value="What is hypertension?" placeholder="Enter your medical question">
+            </div>
+            <div class="input-group">
+                <label>Model:</label>
+                <select id="get-model">
+                    <option value="openai">OpenAI GPT-4</option>
+                    <option value="gemini">Google Gemini Pro</option>
+                    <option value="mistral">Mistral Large</option>
+                    <option value="deepseek">DeepSeek Chat</option>
+                    <option value="llama">Meta Llama</option>
+                </select>
+            </div>
+            <button class="test-button" onclick="testGetWithParams()">Test GET with Parameters</button>
+            <div id="response-get-params" class="response-area" style="display: none;"></div>
+        </div>
+
+        <!-- GET with Route-based Prompt -->
+        <div class="endpoint-section method-get">
+            <div class="endpoint-title">3. GET Request with Route-based Prompt</div>
+            <div class="input-group">
+                <label>Question:</label>
+                <input type="text" id="route-prompt" value="What is diabetes type 2?" placeholder="Enter your medical question">
+            </div>
+            <button class="test-button" onclick="testRouteBasedGet()">Test Route-based GET</button>
+            <div id="response-route-get" class="response-area" style="display: none;"></div>
+        </div>
+
+        <!-- GET with Model Route -->
+        <div class="endpoint-section method-get">
+            <div class="endpoint-title">4. GET Request with Model Specification</div>
+            <div class="input-group">
+                <label>Model:</label>
+                <select id="model-route-model">
+                    <option value="openai">OpenAI GPT-4</option>
+                    <option value="gemini">Google Gemini Pro</option>
+                    <option value="mistral">Mistral Large</option>
+                    <option value="deepseek">DeepSeek Chat</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>Question:</label>
+                <input type="text" id="model-route-prompt" value="Explain cardiac cycle" placeholder="Enter your medical question">
+            </div>
+            <button class="test-button" onclick="testModelRoute()">Test Model Route</button>
+            <div id="response-model-route" class="response-area" style="display: none;"></div>
+        </div>
+
+        <!-- POST with JSON -->
+        <div class="endpoint-section method-post">
+            <div class="endpoint-title">5. POST Request with JSON Payload</div>
+            <div class="input-group">
+                <label>Question:</label>
+                <textarea id="post-prompt" rows="3" placeholder="Explain pharmacokinetics and its clinical importance">Explain pharmacokinetics and its clinical importance</textarea>
+            </div>
+            <div class="input-group">
+                <label>Model:</label>
+                <select id="post-model">
+                    <option value="deepseek">DeepSeek Chat</option>
+                    <option value="openai">OpenAI GPT-4</option>
+                    <option value="gemini">Google Gemini Pro</option>
+                    <option value="mistral">Mistral Large</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label>System Prompt:</label>
+                <input type="text" id="post-system" value="You are a medical education specialist" placeholder="Optional system prompt">
+            </div>
+            <div class="input-group">
+                <label>Temperature:</label>
+                <input type="number" id="post-temperature" value="0.3" min="0" max="2" step="0.1">
+            </div>
+            <button class="test-button" onclick="testPostJson()">Test POST with JSON</button>
+            <div id="response-post-json" class="response-area" style="display: none;"></div>
+        </div>
+
+        <!-- Debug Mode Test -->
+        <div class="endpoint-section" style="border-left-color: #6f42c1;">
+            <div class="endpoint-title">6. Debug Mode Test</div>
+            <div class="input-group">
+                <label>Test Question:</label>
+                <input type="text" id="debug-prompt" value="Test debug mode" placeholder="Enter test question">
+            </div>
+            <button class="test-button" onclick="testDebugMode()">Test with Debug Info</button>
+            <div id="response-debug" class="response-area" style="display: none;"></div>
+        </div>
+
+        <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-radius: 10px;">
+            <h3>📚 Endpoint Documentation</h3>
+            <p><strong>Base URL:</strong> Your server URL (e.g., http://localhost/mcp.php or https://yourserver.com/mcp.php)</p>
+            <ul>
+                <li><strong>Health Check:</strong> GET /mcp.php/health</li>
+                <li><strong>URL Parameters:</strong> GET /mcp.php?prompt=question&model=openai</li>
+                <li><strong>Route-based:</strong> GET /mcp.php/ask/your-question</li>
+                <li><strong>Model Route:</strong> GET /mcp.php/model/gemini/your-question</li>
+                <li><strong>JSON POST:</strong> POST /mcp.php with JSON body</li>
+                <li><strong>Debug Mode:</strong> Add ?debug=1 to any request</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Configure your MCP server URL here
+        const MCP_SERVER_URL = 'mcp.php'; // Change this to your server URL
+
+        async function testEndpoint(responseId, method, url = '', data = null) {
+            const responseElement = document.getElementById(`response-${responseId}`);
+            responseElement.style.display = 'block';
+            responseElement.textContent = 'Loading...';
+            responseElement.className = 'response-area loading';
+
+            try {
+                const config = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                if (data && method === 'POST') {
+                    config.body = JSON.stringify(data);
+                }
+
+                const fullUrl = url || MCP_SERVER_URL;
+                const response = await fetch(fullUrl, config);
+                const result = await response.json();
+
+                responseElement.textContent = JSON.stringify(result, null, 2);
+                responseElement.className = result.success ? 'response-area success' : 'response-area error';
+            } catch (error) {
+                responseElement.textContent = `Error: ${error.message}`;
+                responseElement.className = 'response-area error';
+            }
+        }
+
+        function testGetWithParams() {
+            const prompt = document.getElementById('get-prompt').value;
+            const model = document.getElementById('get-model').value;
+            const url = `${MCP_SERVER_URL}?prompt=${encodeURIComponent(prompt)}&model=${model}&debug=1`;
+            testEndpoint('get-params', 'GET', url);
+        }
+
+        function testRouteBasedGet() {
+            const prompt = document.getElementById('route-prompt').value;
+            const url = `${MCP_SERVER_URL}/ask/${encodeURIComponent(prompt)}?debug=1`;
+            testEndpoint('route-get', 'GET', url);
+        }
+
+        function testModelRoute() {
+            const model = document.getElementById('model-route-model').value;
+            const prompt = document.getElementById('model-route-prompt').value;
+            const url = `${MCP_SERVER_URL}/model/${model}/${encodeURIComponent(prompt)}?debug=1`;
+            testEndpoint('model-route', 'GET', url);
+        }
+
+        function testPostJson() {
+            const data = {
+                prompt: document.getElementById('post-prompt').value,
+                model: document.getElementById('post-model').value,
+                system_prompt: document.getElementById('post-system').value,
+                temperature: parseFloat(document.getElementById('post-temperature').value),
+                max_tokens: 1000,
+                language: 'en'
+            };
+            testEndpoint('post-json', 'POST', `${MCP_SERVER_URL}?debug=1`, data);
+        }
+
+        function testDebugMode() {
+            const prompt = document.getElementById('debug-prompt').value;
+            const url = `${MCP_SERVER_URL}?prompt=${encodeURIComponent(prompt)}&model=openai&debug=1`;
+            testEndpoint('debug', 'GET', url);
+        }
+
+        // Test health endpoint on page load
+        window.onload = function() {
+            testEndpoint('health', 'GET', `${MCP_SERVER_URL}/health`);
+        };
+    </script>
+</body>
+</html>
