@@ -1,0 +1,65 @@
+{
+  "expo": {
+    "name": "medicoAI",
+    "slug": "medicoAI-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#49c140"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app needs access to camera to capture medical images for analysis.",
+        "NSMicrophoneUsageDescription": "This app needs access to microphone for audio messages.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photo library to select medical images for analysis."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#49c140"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-splash-screen",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow medicoAI to access your camera to capture medical images for analysis."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow medicoAI to access your microphone for audio messages."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow medicoAI to access your photos to select medical images for analysis.",
+          "cameraPermission": "Allow medicoAI to access your camera to capture medical images for analysis."
+        }
+      ]
+    ]
+  }
+}
